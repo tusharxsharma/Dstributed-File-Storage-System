@@ -3,6 +3,7 @@
 #include "dfs/common/checksum.hpp"
 
 #include <atomic>
+#include <cstdint>
 #include <fstream>
 #include <limits>
 #include <system_error>
