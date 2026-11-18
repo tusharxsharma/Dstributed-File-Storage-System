@@ -4,14 +4,17 @@ A guided implementation plan. Milestones are intentionally small; correctness ta
 
 | Days | Focus | Expected outcome |
 |---|---|---|
-| 1–3 | Foundation | C++20/CMake project, CI, tests, coding conventions |
-| 4–6 | Local chunk store | Atomic visibility, checksum verification, bounded chunk API |
-| 7–9 | File manifests | Split/reassemble files, metadata model, resumable upload state |
+| 1 | Foundation | C++20/CMake project, CI, checksum primitive, local chunk-store prototype |
+| 2 | File transfer | Bounded-memory file ingestion, ordered in-memory manifest, verified reconstruction |
+| 3 | Manifest persistence | Versioned manifest format, safe serialization and reload validation |
+| 4–6 | Local storage hardening | Storage semantics, durability investigation, crash/fault tests |
+| 7 | Concurrency | Explicit same-chunk write policy and concurrency tests |
+| 8–9 | Metadata and interface | Metadata model and CLI/API prototype |
 | 10–12 | Node service | Storage-node process and health endpoint |
 | 13–15 | RPC | Protocol Buffers and gRPC between coordinator and nodes |
 | 16–18 | Placement | Chunk placement across nodes and replication factor |
 | 19–21 | Failure handling | Node heartbeats, failure simulation, replica repair |
-| 22–24 | Metadata and concurrency | PostgreSQL persistence, locking/idempotency, concurrent operations |
+| 22–24 | Reliability | Rebalancing, idempotency, bounded queues and backpressure |
 | 25–27 | Operations | Docker Compose, metrics, structured logs, graceful shutdown |
 | 28–30 | Validation and demo | Fault-injection tests, benchmarks, architecture docs, demo walkthrough |
 

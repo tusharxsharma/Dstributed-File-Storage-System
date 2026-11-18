@@ -1,28 +1,39 @@
 # Development Progress
 
-## 2026-11-17 — Repository bootstrap
+## 2026-11-17 — Day 1: foundation and chunk-store prototype
 
 ### Completed
-- Created the public C++20 project foundation on `main`.
+- Created the public C++20 project foundation on main.
 - Added CMake configuration, strict compiler warnings, optional AddressSanitizer/UndefinedBehaviorSanitizer flags, and GoogleTest-based CI.
-- Added a small `Result<T>` error-return type.
+- Added a small Result<T> error-return type.
 - Added SHA-256 hashing using OpenSSL EVP.
-- Added a local `ChunkStore` prototype with safe chunk-ID validation, a 4 MiB per-chunk limit, temporary-file writes, rename-based commit, and read-time checksum verification.
+- Added a local ChunkStore prototype with safe chunk-ID validation, a 4 MiB per-chunk limit, temporary-file writes, rename-based commit, and read-time checksum verification.
 - Added unit tests for known SHA-256 vectors, empty input, chunk round-trip, invalid IDs, missing chunks, payload corruption, and oversized chunks.
-- Documented the architecture and 30-day roadmap.
-- Added GitHub Actions workflow for build and test.
+- Added architecture, roadmap, progress and Day 1 learning documentation.
 
 ### Verification
-- GitHub Actions run for commit `ba1f8152eb375099ae60b436130763bbbf0fa595` completed successfully. Configure, build, and test steps all passed.
-- Follow-up commit `f2e063c0a07b71dc5b54e7cf88a7956539ffb675` contains a CMake compatibility cleanup and explicit integer header include. Its CI run was still in progress at the time this entry was written.
+- GitHub Actions runs for commits ba1f8152eb375099ae60b436130763bbbf0fa595, f2e063c0a07b71dc5b54e7cf88a7956539ffb675, and b4c694eef841e9773aba57775ea50b080c17feb4 completed successfully. Configure, build and test passed.
 
-### Known limitations / next engineering tasks
-- This is a local chunk-store prototype, not yet a distributed system.
-- Add a true file-streaming API that chunks large input without loading the whole file.
-- Define and implement the durability contract with file and directory synchronization.
-- Define semantics for concurrent writes to the same chunk ID and portable atomic replacement.
-- Add manifest metadata and chunk sequencing.
-- Only then introduce the node process and gRPC communication.
+## 2026-11-18 — Day 2: bounded file ingestion and reconstruction
 
-## Next milestone
-Implement streaming file ingestion and reconstruction on top of `ChunkStore`, with tests that cover multi-chunk files, empty files, and interrupted operations.
+### Implemented
+- Added FileTransfer::upload, which reads source files incrementally using one reusable 4 MiB input buffer.
+- Added an in-memory FileManifest with file ID, total size, whole-file SHA-256, and ordered chunk references (sequence, deterministic chunk ID, size and per-chunk SHA-256).
+- Added FileTransfer::download, which validates manifest shape, loads and verifies each chunk, recomputes the whole-file digest, and publishes the reconstructed file only after successful verification.
+- Added tests for multi-chunk files, empty files, exact chunk boundaries, a one-byte partial final chunk, invalid file IDs, missing source files, missing chunks, manifest checksum mismatch, chunk checksum mismatch, non-contiguous sequences and total-size mismatch.
+- Updated architecture and roadmap to describe the implemented milestone accurately.
+
+### Verification
+- Day 2 GitHub Actions verification: pending. Record the final run URL, commit SHA and test count here after the PR workflow completes. Do not treat a pushed commit as passing evidence.
+
+### Known limitations
+- FileManifest is in memory only; process restart loses the mapping from file ID to chunk IDs.
+- If ingestion fails after storing some chunks, those chunks may remain orphaned. Cleanup/transaction semantics are a later milestone.
+- The source file is not snapshotted; concurrent modification during ingestion is not detected.
+- Upload uses a reusable 4 MiB input buffer plus one bounded per-chunk vector because ChunkStore currently accepts a vector. The payload memory remains bounded by chunk size; manifest metadata grows with chunk count.
+- ChunkStore reads one full chunk into memory during reconstruction.
+- Temporary-file rename does not provide power-loss durability; file and directory synchronization are not implemented.
+- Replacement semantics vary by filesystem/OS. Same-chunk concurrent writes remain undefined.
+
+### Next milestone — Day 3
+Define a versioned manifest representation and persist/reload it safely. Add validation for malformed, truncated and unsupported manifest records before introducing a database.
