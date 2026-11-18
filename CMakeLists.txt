@@ -17,6 +17,7 @@ find_package(OpenSSL REQUIRED COMPONENTS Crypto)
 
 add_library(dfs_core
     src/core/chunk_store.cpp
+    src/core/file_transfer.cpp
     src/common/checksum.cpp
 )
 target_include_directories(dfs_core PUBLIC include)
@@ -48,6 +49,7 @@ if(BUILD_TESTING)
     add_executable(dfs_tests
         tests/unit/checksum_test.cpp
         tests/unit/chunk_store_test.cpp
+        tests/unit/file_transfer_test.cpp
     )
     target_link_libraries(dfs_tests PRIVATE dfs_core GTest::gtest_main)
     include(GoogleTest)
