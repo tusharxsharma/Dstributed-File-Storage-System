@@ -24,13 +24,16 @@
 - Updated architecture and roadmap to describe the implemented milestone accurately.
 
 ### Verification
-- Day 2 GitHub Actions verification: pending. Record the final run URL, commit SHA and test count here after the PR workflow completes. Do not treat a pushed commit as passing evidence.
+- GitHub Actions run: https://github.com/tusharxsharma/Dstributed-File-Storage-System/actions/runs/44254974369
+- Tested commit: 62682f4149ed7bbba2f64b316ce283cab3f6791d
+- Result: configure passed, build passed, and CTest passed all 18/18 tests (100%).
+- CI used Debug mode with AddressSanitizer and UndefinedBehaviorSanitizer enabled.
 
 ### Known limitations
 - FileManifest is in memory only; process restart loses the mapping from file ID to chunk IDs.
 - If ingestion fails after storing some chunks, those chunks may remain orphaned. Cleanup/transaction semantics are a later milestone.
 - The source file is not snapshotted; concurrent modification during ingestion is not detected.
-- Upload uses a reusable 4 MiB input buffer plus one bounded per-chunk vector because ChunkStore currently accepts a vector. The payload memory remains bounded by chunk size; manifest metadata grows with chunk count.
+- Upload uses a reusable 4 MiB input buffer plus one bounded per-chunk vector because ChunkStore currently accepts a vector. Payload memory remains bounded by chunk size; manifest metadata grows with chunk count.
 - ChunkStore reads one full chunk into memory during reconstruction.
 - Temporary-file rename does not provide power-loss durability; file and directory synchronization are not implemented.
 - Replacement semantics vary by filesystem/OS. Same-chunk concurrent writes remain undefined.

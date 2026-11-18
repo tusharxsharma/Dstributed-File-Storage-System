@@ -2,8 +2,9 @@
 
 **Date:** 18 November 2026  
 **Milestone:** Stream a whole file through the existing chunk store and rebuild it safely  
-**Implementation status:** Implemented; GitHub Actions verification pending  
-**Commit:** See the Day 2 pull request and repository history
+**Implementation status:** Complete — CI passed  
+**Implementation commit:** 62682f4149ed7bbba2f64b316ce283cab3f6791d  
+**CI run:** https://github.com/tusharxsharma/Dstributed-File-Storage-System/actions/runs/44254974369
 
 ## 1. Goal
 
@@ -124,14 +125,11 @@ FileManifest
 
 ## 7. Verification evidence
 
-The Day 2 pull request runs the repository CI workflow:
-- CMake configure in Debug mode with sanitizers enabled;
-- C++ build with strict warnings;
-- GoogleTest suite through CTest.
+**GitHub Actions:** https://github.com/tusharxsharma/Dstributed-File-Storage-System/actions/runs/44254974369  
+**Commit tested:** 62682f4149ed7bbba2f64b316ce283cab3f6791d  
+**Result:** Configure passed; build passed; CTest passed 18/18 tests (100%). The workflow configured Debug mode with AddressSanitizer and UndefinedBehaviorSanitizer enabled.
 
-Record the final GitHub Actions run URL, commit SHA, and exact test count here after the PR check completes. A pushed commit alone is not evidence of passing tests.
-
-Test cases added:
+The 11 new file-transfer tests:
 - StreamsMultipleChunksAndReconstructsOriginalFile
 - SupportsEmptyFiles
 - HandlesExactChunkBoundaryWithoutExtraEmptyChunk
@@ -143,6 +141,8 @@ Test cases added:
 - RejectsNonContiguousManifestSequence
 - RejectsChunkChecksumMismatchInManifest
 - RejectsManifestSizeMismatch
+
+The remaining seven tests cover checksum and ChunkStore behaviour.
 
 ## 8. Interview questions and answer outlines
 
