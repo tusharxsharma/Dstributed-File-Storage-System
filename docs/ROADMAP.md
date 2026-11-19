@@ -6,8 +6,8 @@ A guided implementation plan. Milestones are intentionally small; correctness ta
 |---|---|---|
 | 1 | Foundation | C++20/CMake project, CI, checksum primitive, local chunk-store prototype |
 | 2 | File transfer | Bounded-memory file ingestion, ordered in-memory manifest, verified reconstruction |
-| 3 | Manifest persistence | Versioned manifest format, safe serialization and reload validation |
-| 4–6 | Local storage hardening | Storage semantics, durability investigation, crash/fault tests |
+| 3 | Manifest persistence | Versioned, bounded binary manifest format; metadata checksum; safe save/reload validation |
+| 4–6 | Local storage hardening | Explicit atomicity/durability contract, crash-safe write sequence, cleanup and fault-injection tests |
 | 7 | Concurrency | Explicit same-chunk write policy and concurrency tests |
 | 8–9 | Metadata and interface | Metadata model and CLI/API prototype |
 | 10–12 | Node service | Storage-node process and health endpoint |

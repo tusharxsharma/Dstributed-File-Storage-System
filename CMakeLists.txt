@@ -18,6 +18,7 @@ find_package(OpenSSL REQUIRED COMPONENTS Crypto)
 add_library(dfs_core
     src/core/chunk_store.cpp
     src/core/file_transfer.cpp
+    src/core/manifest_store.cpp
     src/common/checksum.cpp
 )
 target_include_directories(dfs_core PUBLIC include)
@@ -41,7 +42,7 @@ if(BUILD_TESTING)
     include(FetchContent)
     FetchContent_Declare(
         googletest
-        URL https://github.com/google/googletest/archive/refs/tags/v1.15.2.zip
+        URL https://github.com/googletest/archive/refs/tags/v1.15.2.zip
     )
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(googletest)
@@ -50,6 +51,7 @@ if(BUILD_TESTING)
         tests/unit/checksum_test.cpp
         tests/unit/chunk_store_test.cpp
         tests/unit/file_transfer_test.cpp
+        tests/unit/manifest_store_test.cpp
     )
     target_link_libraries(dfs_tests PRIVATE dfs_core GTest::gtest_main)
     include(GoogleTest)

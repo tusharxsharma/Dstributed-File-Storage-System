@@ -1,25 +1,27 @@
 # Architecture
 
-## Current milestone: single-node chunk store and file transfer
+## Current milestone: single-node chunk store, file transfer and manifest persistence
 
 The local storage layer isolates chunk persistence behind ChunkStore. Each chunk is limited to 4 MiB, written to a temporary file, and renamed into place. The record contains a format marker, a SHA-256 digest, and the payload. Chunk IDs are restricted to safe filename characters.
 
 FileTransfer builds on that primitive. Upload reads a source file incrementally into one reusable 4 MiB buffer, stores each non-empty block under a deterministic file-and-sequence chunk ID, and returns an ordered in-memory FileManifest. The manifest records total bytes, per-chunk sizes and checksums, and a SHA-256 checksum for the complete file. Download validates manifest structure before reading chunks, verifies each chunk against both the chunk-store record and manifest, writes to a temporary destination, verifies the complete-file digest, and only then renames the temporary output into place.
 
-The manifest is currently in memory only. Restarting the process loses the file-to-chunk mapping. If upload fails after one or more chunks have been stored, those chunks can remain orphaned. Concurrent modification of the source while it is being read is not detected.
+ManifestStore can persist a FileManifest in a version-1 binary format. The format has a fixed magic header, explicit little-endian integer fields, length-prefixed identifiers, the file and chunk SHA-256 values, and a final SHA-256 over all preceding manifest bytes. The loader checks the file-size bound before allocation, rejects unsupported versions and invalid lengths/counts, verifies the metadata checksum, and validates the reconstructed manifest before returning it. The caller must explicitly save the manifest; FileTransfer::upload does not implicitly persist metadata. A process restart can recover a file mapping only when the caller saved the manifest and the referenced chunks remain available.
 
-The temporary-file-and-rename pattern provides atomic visibility on filesystems where rename replacement is atomic. It is not a power-loss durability guarantee: file and directory synchronization are not implemented. Concurrent writers to the same chunk ID and cross-platform replacement semantics also need explicit handling before the store is exposed as a network service.
+Chunk and manifest writes use temporary sibling files followed by rename. This is an atomic-publication pattern on filesystems with the required rename semantics, not a power-loss durability guarantee. File and parent-directory synchronization are not implemented. Cross-platform replacement behaviour, stale temporary-file recovery, and multi-process writer coordination still need hardening.
 
-## Upload and download data flow
+## Upload, persistence and download data flow
 
 ~~~text
 Upload:
 source file -> reusable 4 MiB buffer -> per-chunk SHA-256 + whole-file SHA-256
-            -> ChunkStore::put -> ordered FileManifest (memory only)
+            -> ChunkStore::put -> ordered FileManifest (memory)
+            -> ManifestStore::save -> versioned/checksummed manifest file
 
-Download:
-FileManifest -> structural validation -> ChunkStore::get -> per-chunk checks
-             -> temporary output + whole-file SHA-256 -> rename to destination
+Recovery/download:
+ManifestStore::load -> bounded parse + metadata checksum + structural validation
+                   -> FileManifest -> ChunkStore::get -> per-chunk checks
+                   -> temporary output + whole-file SHA-256 -> rename to destination
 ~~~
 
 ## Target architecture
@@ -59,8 +61,10 @@ Coordinator / Repair Worker
 - A fixed maximum chunk size bounds the amount of payload data handled by one storage operation.
 - The upload path does not retain the entire source file in memory. Manifest metadata still grows with the number of chunks.
 - Chunk checksums detect per-chunk corruption; the whole-file checksum detects incorrect order, missing bytes, or a manifest that references a different complete payload.
+- The version-1 manifest uses a small explicit binary format instead of adding a serialization dependency before the storage semantics are settled. Integers are little-endian and strings are length-prefixed.
+- Manifest parsing is bounded to 64 MiB and 300,000 chunk records before large allocations are attempted.
+- A final manifest checksum detects accidental metadata corruption. It is not a MAC or signature and does not authenticate the manifest's source.
 - Download publishes output only after every chunk and the complete file checksum pass.
 - Client-facing APIs and storage-node protocols are separate boundaries.
-- Checksums verify integrity; they do not provide authenticity or authorization.
 - Replication policy, quorum semantics, and consistency guarantees must be explicit before being advertised.
 - Failed operations must leave enough state for reconciliation rather than silently losing metadata or data.

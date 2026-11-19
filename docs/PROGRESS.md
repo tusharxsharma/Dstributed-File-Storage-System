@@ -40,3 +40,32 @@
 
 ### Next milestone — Day 3
 Define a versioned manifest representation and persist/reload it safely. Add validation for malformed, truncated and unsupported manifest records before introducing a database.
+
+## 2026-11-19 — Day 3: versioned manifest persistence
+
+### Implemented
+- Added ManifestStore with deterministic version-1 binary serialization and reload.
+- Defined the DFSMAN01 magic, little-endian version/flags/size/count fields, length-prefixed IDs, existing SHA-256 metadata, and a trailing SHA-256 over the encoded manifest payload.
+- Bounded manifest files to 64 MiB and manifests to 300,000 chunk records. The loader checks the file size before allocation and checks declared record counts against remaining bytes before reserving chunk metadata.
+- Added structural validation for file/chunk IDs, digest shape, contiguous sequence numbers, chunk-size limits, integer overflow and total-size consistency.
+- Published manifests through a temporary sibling file and rename. The API is explicit: callers save the manifest returned by FileTransfer::upload.
+- Added eight GoogleTest cases for deterministic round-trip, empty files, upload/save/reload/download integration, invalid metadata, truncation, unsupported versions, checksum corruption and oversized files.
+- Updated architecture and roadmap to reflect that manifest persistence is implemented while durability is not.
+
+### Verification
+- Local Debug library configure/build with GCC 14.2, C++20, OpenSSL 3.5.7, strict warnings, AddressSanitizer and UndefinedBehaviorSanitizer: passed with BUILD_TESTING=OFF.
+- Local ASan/UBSan smoke executable: passed multi-chunk upload → manifest save → new ManifestStore reload → verified download and byte-for-byte comparison; unsupported-version and oversized-file guards also passed.
+- Local GoogleTest execution was unavailable because this environment could not resolve GitHub to fetch the pinned GoogleTest dependency. The repository CI is the authoritative full unit-test run; its result is recorded after the pushed commit completes.
+
+### Known limitations
+- Manifest metadata is read into memory, bounded to 64 MiB; it is not streamed.
+- Save uses flush/close/rename but does not fsync the manifest or parent directory, so power-loss durability is not promised.
+- Temporary names use a process-local sequence; cross-process collision/locking and stale-temp recovery are not implemented.
+- Rename replacement semantics differ across operating systems.
+- The manifest checksum detects accidental corruption but does not authenticate a writer.
+- FileTransfer does not automatically call ManifestStore; the caller must persist the returned manifest.
+- Failed uploads may leave orphan chunks; no garbage collector or transaction state exists.
+- Metadata still has no database index, version history, ownership or access-control model.
+
+### Next milestone — Days 4–6
+Harden local persistence semantics: define the exact visibility/durability contract, add platform-appropriate file and directory synchronization where supported, and introduce fault-injection tests for write, flush, close, rename and recovery paths. Do not claim crash durability until those tests demonstrate it.
