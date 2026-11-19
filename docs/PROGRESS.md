@@ -38,8 +38,8 @@
 - Temporary-file rename does not provide power-loss durability; file and directory synchronization are not implemented.
 - Replacement semantics vary by filesystem/OS. Same-chunk concurrent writes remain undefined.
 
-### Next milestone — Day 3
-Define a versioned manifest representation and persist/reload it safely. Add validation for malformed, truncated and unsupported manifest records before introducing a database.
+### Next milestone at the end of Day 2
+Day 3 was planned to define a versioned manifest representation and persist/reload it safely. The completed Day 3 implementation is recorded below.
 
 ## 2026-11-19 — Day 3: versioned manifest persistence
 
@@ -55,7 +55,10 @@ Define a versioned manifest representation and persist/reload it safely. Add val
 ### Verification
 - Local Debug library configure/build with GCC 14.2, C++20, OpenSSL 3.5.7, strict warnings, AddressSanitizer and UndefinedBehaviorSanitizer: passed with BUILD_TESTING=OFF.
 - Local ASan/UBSan smoke executable: passed multi-chunk upload → manifest save → new ManifestStore reload → verified download and byte-for-byte comparison; unsupported-version and oversized-file guards also passed.
-- Local GoogleTest execution was unavailable because this environment could not resolve GitHub to fetch the pinned GoogleTest dependency. The repository CI is the authoritative full unit-test run; its result is recorded after the pushed commit completes.
+- GitHub Actions run: https://github.com/tusharxsharma/Dstributed-File-Storage-System/actions/runs/44473663953
+- Final tested commit: ecd66a447bbf1f654608e0658cca4ccf9c64be2e (includes the implementation commit 931443c23ee28cb24d93d239b9d1947df349c30e and a correction to the GoogleTest FetchContent URL).
+- Result: configure passed, build passed, and CTest passed all 26/26 tests (100%) in 3.52 seconds. CI used Debug mode with AddressSanitizer and UndefinedBehaviorSanitizer enabled.
+- The first run (44473539051) failed during configure because the GoogleTest archive URL was missing the organization segment. The URL was corrected in the follow-up commit; the complete workflow then passed.
 
 ### Known limitations
 - Manifest metadata is read into memory, bounded to 64 MiB; it is not streamed.
