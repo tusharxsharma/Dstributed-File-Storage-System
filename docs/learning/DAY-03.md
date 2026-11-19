@@ -142,7 +142,7 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=OFF -DDFS_ENABLE_SA
 cmake --build build --parallel 2
 ~~~
 
-Result: configure and library build passed with GCC 14.2, C++20, OpenSSL 3.5.7, strict warnings, AddressSanitizer and UndefinedBehaviorSanitizer. BUILD_TESTING=OFF was necessary because this environment could not resolve GitHub to fetch the pinned GoogleTest dependency.
+Result: configure and library build passed with GCC 14.2, C++20, OpenSSL 3.5.5, strict warnings, AddressSanitizer and UndefinedBehaviorSanitizer. BUILD_TESTING=OFF was necessary because this environment could not resolve GitHub to fetch the pinned GoogleTest dependency.
 
 ### Local integration smoke
 
