@@ -72,3 +72,29 @@ Day 3 was planned to define a versioned manifest representation and persist/relo
 
 ### Next milestone — Days 4–6
 Harden local persistence semantics: define the exact visibility/durability contract, add platform-appropriate file and directory synchronization where supported, and introduce fault-injection tests for write, flush, close, rename and recovery paths. Do not claim crash durability until those tests demonstrate it.
+
+## 2026-11-20 — Day 4: durable manifest publication
+
+### Implemented
+- Reworked POSIX ManifestStore::save to create a unique temporary sibling using exclusive creation (O_EXCL), a process ID and an atomic sequence; temporary files are created with mode 0600.
+- Handles short writes and EINTR while writing the encoded manifest.
+- Establishes the write ordering: write temporary bytes → fsync temporary file → close → rename over the destination → fsync containing directory.
+- Returns a distinct error message when directory synchronization fails after rename, because the new manifest may already be visible while durability is uncertain.
+- Added tests for replacing an existing manifest with a different valid manifest, temporary-file cleanup after successful publication, and validation failure preserving the previous manifest.
+- Updated architecture and roadmap to distinguish durable manifest publication from ChunkStore's still-atomic-but-not-durable write path.
+
+### Verification
+- GitHub Actions run: https://github.com/tusharxsharma/Dstributed-File-Storage-System/actions/runs/44688113308
+- Tested implementation commit: 97ae664d14aada2df0f565d0d6a06ec7123c921e
+- Result: configure passed, build passed, CTest passed 28/28 tests (100%) in 5.25 seconds. Debug build with AddressSanitizer and UndefinedBehaviorSanitizer enabled.
+- Local checkout/build was not available in this environment: cloning from github.com failed due to DNS resolution. The full build and test suite were verified on GitHub Actions instead.
+
+### Known limitations
+- Durability support is currently limited to POSIX platforms for ManifestStore; other platforms return an explicit unsupported-platform error.
+- ChunkStore still does not fsync its temporary file or parent directory.
+- A directory-sync failure after rename is an ambiguous outcome: the destination can be visible, but durable commit is not confirmed.
+- No stale-temp recovery, destination locking, transaction protocol for chunk+manifest commit, or injected syscall failures yet.
+- Actual persistence guarantees depend on the filesystem, operating system and storage hardware.
+
+### Next milestone
+Day 5: identify and safely clean stale manifest/chunk temporary files, document crash points and recovery policy, and avoid deleting active writers' files.
