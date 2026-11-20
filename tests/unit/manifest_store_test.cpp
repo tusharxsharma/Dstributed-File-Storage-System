@@ -184,3 +184,42 @@ TEST_F(ManifestStoreTest, RejectsOversizedFileBeforeReadingIt) {
     ASSERT_FALSE(loaded);
     EXPECT_NE(loaded.error().find("64 MiB size limit"), std::string::npos);
 }
+
+TEST_F(ManifestStoreTest, ReplacesExistingManifestAndRemovesTemporaryFile) {
+    const auto path = root_ / "metadata" / "replace.manifest";
+    const dfs::ManifestStore store(path);
+    ASSERT_TRUE(store.save(sample_manifest()));
+
+    const std::vector<std::byte> empty;
+    const dfs::FileManifest replacement{
+        "sample-file", 0U, dfs::Checksum::sha256(empty), {}};
+    const auto replaced = store.save(replacement);
+    ASSERT_TRUE(replaced) << replaced.error();
+
+    const auto loaded = store.load();
+    ASSERT_TRUE(loaded) << loaded.error();
+    EXPECT_EQ(loaded.value().file_id, replacement.file_id);
+    EXPECT_EQ(loaded.value().total_size_bytes, 0U);
+    EXPECT_TRUE(loaded.value().chunks.empty());
+
+    for (const auto& entry : std::filesystem::directory_iterator(path.parent_path()))
+        EXPECT_EQ(entry.path().filename().string().find(".tmp."), std::string::npos);
+}
+
+TEST_F(ManifestStoreTest, RejectsInvalidReplacementAndKeepsPreviousManifest) {
+    const auto path = root_ / "preserve.manifest";
+    const dfs::ManifestStore store(path);
+    const auto original = sample_manifest();
+    ASSERT_TRUE(store.save(original));
+
+    auto invalid = original;
+    invalid.chunks.front().sequence = 5U;
+    const auto failed = store.save(invalid);
+    EXPECT_FALSE(failed);
+
+    const auto loaded = store.load();
+    ASSERT_TRUE(loaded) << loaded.error();
+    EXPECT_EQ(loaded.value().sha256, original.sha256);
+    EXPECT_EQ(loaded.value().total_size_bytes, original.total_size_bytes);
+    EXPECT_EQ(loaded.value().chunks.front().sequence, original.chunks.front().sequence);
+}

@@ -4,6 +4,8 @@
 #include "dfs/storage/chunk_store.hpp"
 
 #include <array>
+#include <cerrno>
+#include <string>
 #include <atomic>
 #include <cstdint>
 #include <fstream>
@@ -12,6 +14,11 @@
 #include <string_view>
 #include <system_error>
 #include <utility>
+#if defined(__unix__) || defined(__APPLE__)
+#include <fcntl.h>
+#include <sys/types.h>
+#include <unistd.h>
+#endif
 #include <vector>
 
 namespace dfs {
@@ -224,6 +231,42 @@ Result<FileManifest> decode_manifest(std::span<const std::byte> encoded) {
     if (!validation) return Result<FileManifest>::failure(validation.error());
     return Result<FileManifest>::success(std::move(manifest));
 }
+
+#if defined(__unix__) || defined(__APPLE__)
+std::string errno_message(std::string_view operation) {
+    return std::string(operation) + ": " + std::error_code(errno, std::generic_category()).message();
+}
+
+Result<void> write_all(int fd, std::span<const std::byte> data) {
+    std::size_t offset = 0U;
+    while (offset < data.size()) {
+        const ssize_t written = ::write(fd, data.data() + offset, data.size() - offset);
+        if (written < 0) {
+            if (errno == EINTR) continue;
+            return Result<void>::failure(errno_message("write manifest temporary file"));
+        }
+        if (written == 0) return Result<void>::failure("write returned zero bytes for manifest");
+        offset += static_cast<std::size_t>(written);
+    }
+    return Result<void>::success();
+}
+
+class TemporaryPathCleanup {
+public:
+    explicit TemporaryPathCleanup(std::filesystem::path path) : path_(std::move(path)) {}
+    ~TemporaryPathCleanup() {
+        if (active_) {
+            std::error_code ignored;
+            std::filesystem::remove(path_, ignored);
+        }
+    }
+    void release() noexcept { active_ = false; }
+private:
+    std::filesystem::path path_;
+    bool active_{true};
+};
+#endif
+
 } // namespace
 
 ManifestStore::ManifestStore(std::filesystem::path manifest_path)
@@ -235,40 +278,73 @@ Result<void> ManifestStore::save(const FileManifest& manifest) const {
     const auto encoded = encode_manifest(manifest);
     if (!encoded) return Result<void>::failure(encoded.error());
 
-    const auto suffix = g_temp_sequence.fetch_add(1, std::memory_order_relaxed);
-    const std::filesystem::path temporary = path_.string() + ".tmp." + std::to_string(suffix);
     try {
         if (!path_.parent_path().empty())
             std::filesystem::create_directories(path_.parent_path());
-        std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
-        if (!output) return Result<void>::failure("unable to open temporary manifest file");
-        output.write(reinterpret_cast<const char*>(encoded.value().data()),
-                     static_cast<std::streamsize>(encoded.value().size()));
-        output.flush();
-        if (!output) {
-            output.close();
-            std::error_code ignored;
-            std::filesystem::remove(temporary, ignored);
-            return Result<void>::failure("failed while writing manifest data");
+#if defined(__unix__) || defined(__APPLE__)
+        int temporary_fd = -1;
+        std::filesystem::path temporary;
+        for (unsigned int attempt = 0U; attempt < 64U; ++attempt) {
+            const auto suffix = g_temp_sequence.fetch_add(1, std::memory_order_relaxed);
+            temporary = path_.string() + ".tmp." + std::to_string(::getpid()) + "." +
+                       std::to_string(suffix);
+            int flags = O_WRONLY | O_CREAT | O_EXCL;
+#ifdef O_CLOEXEC
+            flags |= O_CLOEXEC;
+#endif
+            temporary_fd = ::open(temporary.c_str(), flags, 0600);
+            if (temporary_fd >= 0) break;
+            if (errno != EEXIST)
+                return Result<void>::failure(errno_message("create temporary manifest file"));
         }
-        output.close();
-        if (!output) {
-            std::error_code ignored;
-            std::filesystem::remove(temporary, ignored);
-            return Result<void>::failure("failed to close temporary manifest file");
-        }
+        if (temporary_fd < 0)
+            return Result<void>::failure("unable to allocate a unique temporary manifest filename");
 
-        std::error_code error;
-        std::filesystem::rename(temporary, path_, error);
-        if (error) {
-            std::error_code ignored;
-            std::filesystem::remove(temporary, ignored);
-            return Result<void>::failure("unable to publish manifest: " + error.message());
+        TemporaryPathCleanup cleanup(temporary);
+        const auto written = write_all(temporary_fd, encoded.value());
+        if (!written) {
+            const std::string message = written.error();
+            (void)::close(temporary_fd);
+            return Result<void>::failure(message);
         }
+        if (::fsync(temporary_fd) != 0) {
+            const std::string message = errno_message("fsync manifest file");
+            (void)::close(temporary_fd);
+            return Result<void>::failure(message);
+        }
+        if (::close(temporary_fd) != 0)
+            return Result<void>::failure(errno_message("close manifest file"));
+
+        if (::rename(temporary.c_str(), path_.c_str()) != 0)
+            return Result<void>::failure(errno_message("publish manifest with rename"));
+        cleanup.release();
+
+        const std::filesystem::path directory =
+            path_.parent_path().empty() ? std::filesystem::path(".") : path_.parent_path();
+        int directory_flags = O_RDONLY;
+#ifdef O_DIRECTORY
+        directory_flags |= O_DIRECTORY;
+#endif
+#ifdef O_CLOEXEC
+        directory_flags |= O_CLOEXEC;
+#endif
+        const int directory_fd = ::open(directory.c_str(), directory_flags);
+        if (directory_fd < 0)
+            return Result<void>::failure(
+                "manifest was published, but parent directory could not be opened for sync: " +
+                errno_message("open parent directory"));
+        if (::fsync(directory_fd) != 0) {
+            const std::string message = errno_message("fsync parent directory");
+            (void)::close(directory_fd);
+            return Result<void>::failure(
+                "manifest was published, but parent-directory durability is uncertain: " + message);
+        }
+        (void)::close(directory_fd);
         return Result<void>::success();
+#else
+        return Result<void>::failure("durable manifest save requires POSIX file APIs on this platform");
+#endif
     } catch (const std::exception& error) {
-        std::error_code ignored;
-        std::filesystem::remove(temporary, ignored);
         return Result<void>::failure(error.what());
     }
 }
