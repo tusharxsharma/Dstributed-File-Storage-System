@@ -8,8 +8,8 @@ A guided implementation plan. Milestones are intentionally small; correctness ta
 | 2 | File transfer | Bounded-memory file ingestion, ordered in-memory manifest, verified reconstruction |
 | 3 | Manifest persistence | Versioned, bounded binary manifest format; metadata checksum; safe save/reload validation |
 | 4 | Local durability | Durable ManifestStore publication: file fsync, rename, parent-directory fsync, and unique temp creation |
-| 5 | Recovery hygiene | Stale-temp discovery/cleanup policy and documented crash states |
-| 6 | Fault injection | Inject failures at write/sync/rename boundaries and verify recovery/visibility invariants |
+| 5 | Recovery hygiene (manifest temps) | Explicit, target-scoped stale manifest-temp sweep with age and owner-PID checks; documented crash states |
+| 6 | Fault injection (manifest publication) | Inject failures at write/sync/rename/recovery boundaries and verify visibility and cleanup invariants |
 | 7 | Concurrency | Explicit same-chunk write policy and concurrency tests |
 | 8–9 | Metadata and interface | Metadata model and CLI/API prototype |
 | 10–12 | Node service | Storage-node process and health endpoint |
