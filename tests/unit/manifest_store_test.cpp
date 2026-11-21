@@ -12,6 +12,9 @@
 #include <iterator>
 #include <string>
 #include <string_view>
+#if defined(__unix__) || defined(__APPLE__)
+#include <unistd.h>
+#endif
 #include <vector>
 
 namespace {
@@ -222,4 +225,84 @@ TEST_F(ManifestStoreTest, RejectsInvalidReplacementAndKeepsPreviousManifest) {
     EXPECT_EQ(loaded.value().sha256, original.sha256);
     EXPECT_EQ(loaded.value().total_size_bytes, original.total_size_bytes);
     EXPECT_EQ(loaded.value().chunks.front().sequence, original.chunks.front().sequence);
+}
+
+
+TEST_F(ManifestStoreTest, RemovesOldTempsOwnedByDeadProcessesAndIsIdempotent) {
+    const auto manifest_path = root_ / "recovery.manifest";
+    const dfs::ManifestStore store(manifest_path);
+    const auto stale = root_ / "recovery.manifest.tmp.2147483647.7";
+    write_all(stale, std::vector<char>{'s','t','a','l','e'});
+    std::error_code error;
+    std::filesystem::last_write_time(
+        stale, std::filesystem::file_time_type::clock::now() - std::chrono::hours(48), error);
+    ASSERT_FALSE(error);
+
+    const auto cleaned = store.cleanup_stale_temporary_files(std::chrono::hours(24));
+    ASSERT_TRUE(cleaned) << cleaned.error();
+    EXPECT_EQ(cleaned.value(), 1U);
+    EXPECT_FALSE(std::filesystem::exists(stale));
+
+    const auto repeated = store.cleanup_stale_temporary_files(std::chrono::hours(24));
+    ASSERT_TRUE(repeated) << repeated.error();
+    EXPECT_EQ(repeated.value(), 0U);
+}
+
+TEST_F(ManifestStoreTest, PreservesRecentTempsEvenWhenOwnerIsDead) {
+    const dfs::ManifestStore store(root_ / "recent.manifest");
+    const auto recent = root_ / "recent.manifest.tmp.2147483647.8";
+    write_all(recent, std::vector<char>{'r'});
+    const auto cleaned = store.cleanup_stale_temporary_files(std::chrono::hours(24));
+    ASSERT_TRUE(cleaned) << cleaned.error();
+    EXPECT_EQ(cleaned.value(), 0U);
+    EXPECT_TRUE(std::filesystem::exists(recent));
+}
+
+TEST_F(ManifestStoreTest, PreservesOldTempsOwnedByAnActiveProcess) {
+#if defined(__unix__) || defined(__APPLE__)
+    const dfs::ManifestStore store(root_ / "active.manifest");
+    const auto active = root_ / ("active.manifest.tmp." + std::to_string(::getpid()) + ".9");
+    write_all(active, std::vector<char>{'a'});
+    std::error_code error;
+    std::filesystem::last_write_time(
+        active, std::filesystem::file_time_type::clock::now() - std::chrono::hours(48), error);
+    ASSERT_FALSE(error);
+
+    const auto cleaned = store.cleanup_stale_temporary_files(std::chrono::hours(24));
+    ASSERT_TRUE(cleaned) << cleaned.error();
+    EXPECT_EQ(cleaned.value(), 0U);
+    EXPECT_TRUE(std::filesystem::exists(active));
+#endif
+}
+
+TEST_F(ManifestStoreTest, IgnoresMalformedNamesOtherTargetsAndSymlinks) {
+#if defined(__unix__) || defined(__APPLE__)
+    const dfs::ManifestStore store(root_ / "target.manifest");
+    const auto malformed = root_ / "target.manifest.tmp.not-a-pid.2";
+    const auto other = root_ / "other.manifest.tmp.2147483647.3";
+    const auto link_target = root_ / "link-target";
+    const auto symlink = root_ / "target.manifest.tmp.2147483647.4";
+    write_all(malformed, std::vector<char>{'m'});
+    write_all(other, std::vector<char>{'o'});
+    write_all(link_target, std::vector<char>{'l'});
+    std::filesystem::create_symlink(link_target, symlink);
+    std::error_code error;
+    for (const auto& candidate : {malformed, other, link_target, symlink})
+        std::filesystem::last_write_time(
+            candidate, std::filesystem::file_time_type::clock::now() - std::chrono::hours(48), error);
+    ASSERT_FALSE(error);
+
+    const auto cleaned = store.cleanup_stale_temporary_files(std::chrono::hours(24));
+    ASSERT_TRUE(cleaned) << cleaned.error();
+    EXPECT_EQ(cleaned.value(), 0U);
+    EXPECT_TRUE(std::filesystem::exists(malformed));
+    EXPECT_TRUE(std::filesystem::exists(other));
+    EXPECT_TRUE(std::filesystem::is_symlink(symlink));
+#endif
+}
+
+TEST_F(ManifestStoreTest, RejectsNegativeCleanupAge) {
+    const dfs::ManifestStore store(root_ / "negative.manifest");
+    const auto cleaned = store.cleanup_stale_temporary_files(std::chrono::seconds(-1));
+    EXPECT_FALSE(cleaned);
 }
