@@ -4,6 +4,8 @@
 #include "dfs/storage/chunk_store.hpp"
 
 #include <array>
+#include <charconv>
+#include <chrono>
 #include <cerrno>
 #include <string>
 #include <atomic>
@@ -17,6 +19,7 @@
 #if defined(__unix__) || defined(__APPLE__)
 #include <fcntl.h>
 #include <sys/types.h>
+#include <signal.h>
 #include <unistd.h>
 #endif
 #include <vector>
@@ -237,6 +240,35 @@ std::string errno_message(std::string_view operation) {
     return std::string(operation) + ": " + std::error_code(errno, std::generic_category()).message();
 }
 
+bool parse_temp_owner(std::string_view name, std::string_view prefix, pid_t& owner) {
+    if (!name.starts_with(prefix)) return false;
+    const std::string_view suffix = name.substr(prefix.size());
+    const std::size_t separator = suffix.find('.');
+    if (separator == std::string_view::npos || separator == 0U ||
+        separator + 1U >= suffix.size()) return false;
+    const std::string_view pid_text = suffix.substr(0U, separator);
+    const std::string_view sequence_text = suffix.substr(separator + 1U);
+    std::uint64_t pid_value = 0U;
+    std::uint64_t sequence_value = 0U;
+    const auto pid_parse = std::from_chars(pid_text.data(), pid_text.data() + pid_text.size(), pid_value);
+    const auto sequence_parse = std::from_chars(
+        sequence_text.data(), sequence_text.data() + sequence_text.size(), sequence_value);
+    if (pid_parse.ec != std::errc{} || pid_parse.ptr != pid_text.data() + pid_text.size() ||
+        sequence_parse.ec != std::errc{} ||
+        sequence_parse.ptr != sequence_text.data() + sequence_text.size() ||
+        pid_value == 0U || pid_value > static_cast<std::uint64_t>(std::numeric_limits<pid_t>::max()))
+        return false;
+    owner = static_cast<pid_t>(pid_value);
+    return true;
+}
+
+bool process_is_alive(pid_t pid) noexcept {
+    if (::kill(pid, 0) == 0) return true;
+    // EPERM means the process exists but cannot be inspected. Unknown errors are
+    // treated conservatively as "alive" so cleanup never guesses.
+    return errno != ESRCH;
+}
+
 Result<void> write_all(int fd, std::span<const std::byte> data) {
     std::size_t offset = 0U;
     while (offset < data.size()) {
@@ -347,6 +379,60 @@ Result<void> ManifestStore::save(const FileManifest& manifest) const {
     } catch (const std::exception& error) {
         return Result<void>::failure(error.what());
     }
+}
+
+Result<std::size_t> ManifestStore::cleanup_stale_temporary_files(
+    std::chrono::seconds minimum_age) const {
+    if (path_.empty() || path_.filename().empty())
+        return Result<std::size_t>::failure("manifest path must include a filename");
+    if (minimum_age.count() < 0)
+        return Result<std::size_t>::failure("minimum temporary-file age must not be negative");
+#if defined(__unix__) || defined(__APPLE__)
+    try {
+        const std::filesystem::path directory =
+            path_.parent_path().empty() ? std::filesystem::path(".") : path_.parent_path();
+        std::error_code error;
+        if (!std::filesystem::exists(directory, error)) {
+            if (error) return Result<std::size_t>::failure("inspect manifest directory: " + error.message());
+            return Result<std::size_t>::success(0U);
+        }
+        const std::string prefix = path_.filename().string() + ".tmp.";
+        const auto cutoff = std::filesystem::file_time_type::clock::now() - minimum_age;
+        std::size_t removed = 0U;
+        std::filesystem::directory_iterator iterator(directory, error);
+        if (error) return Result<std::size_t>::failure("scan manifest directory: " + error.message());
+        const std::filesystem::directory_iterator end;
+        while (iterator != end) {
+            const auto candidate = iterator->path();
+            const std::string name = candidate.filename().string();
+            pid_t owner = 0;
+            if (parse_temp_owner(name, prefix, owner)) {
+                const auto status = iterator->symlink_status(error);
+                if (!error && std::filesystem::is_regular_file(status)) {
+                    const auto modified = std::filesystem::last_write_time(candidate, error);
+                    if (!error && modified <= cutoff && !process_is_alive(owner)) {
+                        if (std::filesystem::remove(candidate, error)) {
+                            ++removed;
+                        } else if (error) {
+                            return Result<std::size_t>::failure(
+                                "remove stale manifest temporary file: " + error.message());
+                        }
+                    }
+                }
+                error.clear();
+            }
+            iterator.increment(error);
+            if (error)
+                return Result<std::size_t>::failure("scan manifest directory: " + error.message());
+        }
+        return Result<std::size_t>::success(removed);
+    } catch (const std::exception& exception) {
+        return Result<std::size_t>::failure(exception.what());
+    }
+#else
+    return Result<std::size_t>::failure(
+        "stale manifest temporary-file cleanup requires POSIX process APIs");
+#endif
 }
 
 Result<FileManifest> ManifestStore::load() const {
