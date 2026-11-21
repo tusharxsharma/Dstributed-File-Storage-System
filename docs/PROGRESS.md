@@ -98,3 +98,28 @@ Harden local persistence semantics: define the exact visibility/durability contr
 
 ### Next milestone
 Day 5: identify and safely clean stale manifest/chunk temporary files, document crash points and recovery policy, and avoid deleting active writers' files.
+
+
+## 2026-11-21 — Day 5: conservative manifest temporary-file recovery
+
+### Implemented
+- Added an explicit ManifestStore::cleanup_stale_temporary_files operation scoped to the sibling temporary-name prefix of one manifest target; it is not automatically invoked by save/load.
+- The sweep uses a configurable minimum age (24 hours by default), validates the PID and sequence in the temp filename, skips files whose owner process appears alive, skips malformed names, symlinks and non-regular files, and returns the removal count.
+- Missing parent directories are treated as an idempotent zero-removal result. Negative grace periods are rejected. The implementation is POSIX-only and fails explicitly elsewhere.
+- Added tests for stale-temp removal/idempotence, recent-file retention, active-owner retention, malformed names, unrelated target prefixes, symlinks and invalid age.
+- Updated architecture, roadmap and learning notes to describe the bounded scope and race limitations.
+
+### Verification
+- Pending GitHub Actions verification for the implementation commit. Do not mark the milestone green until configure, build and CTest complete.
+- Local clone/build could not be run in this environment because github.com DNS resolution failed.
+
+### Known limitations
+- This sweeps manifest temporary siblings only; ChunkStore temp naming is not covered.
+- PID liveness is local to the current PID namespace and cannot eliminate all PID reuse or scan/unlink races.
+- Cleanup is explicit, not automatically run during load/save; callers must choose when to invoke it.
+- The 24-hour default avoids aggressive cleanup but is configurable; callers can choose a shorter age and assume more risk.
+- Cleanup removals are not directory-fsync'd, so their own power-loss persistence is not promised.
+- No cross-process destination lock, journal, chunk+manifest transaction, or power-loss recovery protocol exists.
+
+### Next milestone
+Day 6: introduce syscall fault injection around manifest write, file fsync, close, rename, directory open/fsync and recovery cleanup. Verify which cases preserve the old destination, which may already publish the new file, and how stale temp recovery should behave.
