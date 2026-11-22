@@ -2,7 +2,7 @@
 
 **Date:** 22 November 2026  
 **Milestone:** Inject failures at manifest-publication and recovery-cleanup boundaries  
-**Status:** Implementation and tests pushed; GitHub Actions verification not yet confirmed
+**Status:** Implemented and verified by GitHub Actions (40/40 tests passed)
 
 ## 1. Goal
 
@@ -120,8 +120,8 @@ These are API-level invariants under the injected conditions, not proof about ev
   6. InjectedParentDirectorySyncFailureReportsVisibleManifest  
   7. InjectedRecoveryRemoveFailureLeavesCandidateAndReportsError
 - **Local configure/build/CTest:** not run. Cloning from github.com failed because DNS resolution was unavailable in this environment.
-- **GitHub Actions:** the test commit was pushed, but the run result could not be retrieved through the available GitHub status/run endpoints at the time of this note. Do not mark this milestone green until a workflow result is confirmed.
-- The test suite currently has 33 existing tests plus these seven cases; 40 total is the expected count if the build and test discovery succeed. This is an expected count, not a claimed test result.
+- **GitHub Actions:** run 44994371354 (C++ CI) verified commit 449f013c773fe763b65c846b9079f5bd5b9bea3a. Configure, build and CTest completed successfully; all 40/40 tests passed in 3.69 seconds. Debug CI enabled AddressSanitizer and UndefinedBehaviorSanitizer.
+- Local build was not performed because cloning from github.com failed due to DNS resolution. CI is the verification evidence.
 
 ## 10. Interview questions and answer outlines
 
