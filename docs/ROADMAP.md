@@ -9,7 +9,7 @@ A guided implementation plan. Milestones are intentionally small; correctness ta
 | 3 | Manifest persistence | Versioned, bounded binary manifest format; metadata checksum; safe save/reload validation |
 | 4 | Local durability | Durable ManifestStore publication: file fsync, rename, parent-directory fsync, and unique temp creation |
 | 5 | Recovery hygiene (manifest temps) | Explicit, target-scoped stale manifest-temp sweep with age and owner-PID checks; documented crash states |
-| 6 | Fault injection (manifest publication) | Inject failures at write/sync/rename/recovery boundaries and verify visibility and cleanup invariants |
+| 6 | Fault injection (manifest publication) | Injectable operations seam; failures at write, file/directory sync, close, rename, directory open and recovery removal; assert visibility/cleanup invariants |
 | 7 | Concurrency | Explicit same-chunk write policy and concurrency tests |
 | 8–9 | Metadata and interface | Metadata model and CLI/API prototype |
 | 10–12 | Node service | Storage-node process and health endpoint |
