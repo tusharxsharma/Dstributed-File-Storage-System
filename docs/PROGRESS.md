@@ -110,7 +110,7 @@ Day 5: identify and safely clean stale manifest/chunk temporary files, document 
 - Updated architecture, roadmap and learning notes to describe the bounded scope and race limitations.
 
 ### Verification
-- Pending GitHub Actions verification for the implementation commit. Do not mark the milestone green until configure, build and CTest complete.
+- The original Day 5 run was not confirmed at the time. Day 6 PR CI run 44994371354 subsequently included and passed all Day 5 recovery tests as part of the 40-test suite.
 - Local clone/build could not be run in this environment because github.com DNS resolution failed.
 
 ### Known limitations
@@ -138,7 +138,7 @@ Day 6: introduce syscall fault injection around manifest write, file fsync, clos
 - The implementation and tests were pushed in commit f67880d55a2a7a64c4569ade3a6776f14d4e4648.
 - Expected total: 40 tests (33 existing + 7 new), if configure/build/test discovery succeed.
 - Local configure/build/CTest was not performed: github.com DNS resolution failed during clone.
-- GitHub Actions status was not confirmed through the available status/run endpoints at the time of this progress entry. Do not mark Day 6 green until a CI run is confirmed.
+- GitHub Actions run 44994371354 (C++ CI) verified commit 449f013c773fe763b65c846b9079f5bd5b9bea3a: configure passed, build passed, CTest passed 40/40 tests in 3.69 seconds. Debug CI used AddressSanitizer and UndefinedBehaviorSanitizer.
 
 ### Failure-state invariants
 - Write, file fsync, close and rename failures before publication preserve the previous manifest bytes; temp cleanup is attempted.
