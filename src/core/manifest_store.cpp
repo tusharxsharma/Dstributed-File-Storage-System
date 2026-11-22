@@ -4,6 +4,7 @@
 #include "dfs/storage/chunk_store.hpp"
 
 #include <array>
+#include <cstdio>
 #include <charconv>
 #include <chrono>
 #include <cerrno>
@@ -269,40 +270,76 @@ bool process_is_alive(pid_t pid) noexcept {
     return errno != ESRCH;
 }
 
-Result<void> write_all(int fd, std::span<const std::byte> data) {
+Result<void> write_all(int fd, std::span<const std::byte> data,
+                       const ManifestStoreSyscalls& syscalls) {
     std::size_t offset = 0U;
     while (offset < data.size()) {
-        const ssize_t written = ::write(fd, data.data() + offset, data.size() - offset);
+        const std::ptrdiff_t written = syscalls.write(fd, data.data() + offset, data.size() - offset);
         if (written < 0) {
             if (errno == EINTR) continue;
             return Result<void>::failure(errno_message("write manifest temporary file"));
         }
         if (written == 0) return Result<void>::failure("write returned zero bytes for manifest");
-        offset += static_cast<std::size_t>(written);
+        const auto count = static_cast<std::size_t>(written);
+        if (count > data.size() - offset)
+            return Result<void>::failure("write returned an invalid byte count for manifest");
+        offset += count;
     }
     return Result<void>::success();
 }
 
 class TemporaryPathCleanup {
 public:
-    explicit TemporaryPathCleanup(std::filesystem::path path) : path_(std::move(path)) {}
+    TemporaryPathCleanup(std::filesystem::path path,
+                        std::function<bool(const std::filesystem::path&, std::error_code&)> remove_path)
+        : path_(std::move(path)), remove_path_(std::move(remove_path)) {}
     ~TemporaryPathCleanup() {
         if (active_) {
             std::error_code ignored;
-            std::filesystem::remove(path_, ignored);
+            try { (void)remove_path_(path_, ignored); } catch (...) { }
         }
     }
     void release() noexcept { active_ = false; }
 private:
     std::filesystem::path path_;
+    std::function<bool(const std::filesystem::path&, std::error_code&)> remove_path_;
     bool active_{true};
 };
 #endif
 
 } // namespace
 
+std::shared_ptr<ManifestStoreSyscalls> make_default_manifest_store_syscalls() {
+    auto syscalls = std::make_shared<ManifestStoreSyscalls>();
+#if defined(__unix__) || defined(__APPLE__)
+    syscalls->open_temp = [](const std::filesystem::path& path, int flags, int mode) {
+        return ::open(path.c_str(), flags, static_cast<mode_t>(mode));
+    };
+    syscalls->write = [](int fd, const void* data, std::size_t size) {
+        return static_cast<std::ptrdiff_t>(::write(fd, data, size));
+    };
+    syscalls->fsync = [](int fd) { return ::fsync(fd); };
+    syscalls->close = [](int fd) { return ::close(fd); };
+    syscalls->rename = [](const std::filesystem::path& from, const std::filesystem::path& to) {
+        return std::rename(from.c_str(), to.c_str());
+    };
+    syscalls->open_directory = [](const std::filesystem::path& path, int flags) {
+        return ::open(path.c_str(), flags);
+    };
+    syscalls->remove_path = [](const std::filesystem::path& path, std::error_code& error) {
+        return std::filesystem::remove(path, error);
+    };
+#endif
+    return syscalls;
+}
+
 ManifestStore::ManifestStore(std::filesystem::path manifest_path)
-    : path_(std::move(manifest_path)) {}
+    : ManifestStore(std::move(manifest_path), make_default_manifest_store_syscalls()) {}
+
+ManifestStore::ManifestStore(std::filesystem::path manifest_path,
+                             std::shared_ptr<ManifestStoreSyscalls> syscalls)
+    : path_(std::move(manifest_path)),
+      syscalls_(syscalls ? std::move(syscalls) : make_default_manifest_store_syscalls()) {}
 
 Result<void> ManifestStore::save(const FileManifest& manifest) const {
     if (path_.empty() || path_.filename().empty())
@@ -324,7 +361,7 @@ Result<void> ManifestStore::save(const FileManifest& manifest) const {
 #ifdef O_CLOEXEC
             flags |= O_CLOEXEC;
 #endif
-            temporary_fd = ::open(temporary.c_str(), flags, 0600);
+            temporary_fd = syscalls_->open_temp(temporary, flags, 0600);
             if (temporary_fd >= 0) break;
             if (errno != EEXIST)
                 return Result<void>::failure(errno_message("create temporary manifest file"));
@@ -332,22 +369,22 @@ Result<void> ManifestStore::save(const FileManifest& manifest) const {
         if (temporary_fd < 0)
             return Result<void>::failure("unable to allocate a unique temporary manifest filename");
 
-        TemporaryPathCleanup cleanup(temporary);
-        const auto written = write_all(temporary_fd, encoded.value());
+        TemporaryPathCleanup cleanup(temporary, syscalls_->remove_path);
+        const auto written = write_all(temporary_fd, encoded.value(), *syscalls_);
         if (!written) {
             const std::string message = written.error();
-            (void)::close(temporary_fd);
+            (void)syscalls_->close(temporary_fd);
             return Result<void>::failure(message);
         }
-        if (::fsync(temporary_fd) != 0) {
+        if (syscalls_->fsync(temporary_fd) != 0) {
             const std::string message = errno_message("fsync manifest file");
-            (void)::close(temporary_fd);
+            (void)syscalls_->close(temporary_fd);
             return Result<void>::failure(message);
         }
-        if (::close(temporary_fd) != 0)
+        if (syscalls_->close(temporary_fd) != 0)
             return Result<void>::failure(errno_message("close manifest file"));
 
-        if (::rename(temporary.c_str(), path_.c_str()) != 0)
+        if (syscalls_->rename(temporary, path_) != 0)
             return Result<void>::failure(errno_message("publish manifest with rename"));
         cleanup.release();
 
@@ -360,18 +397,18 @@ Result<void> ManifestStore::save(const FileManifest& manifest) const {
 #ifdef O_CLOEXEC
         directory_flags |= O_CLOEXEC;
 #endif
-        const int directory_fd = ::open(directory.c_str(), directory_flags);
+        const int directory_fd = syscalls_->open_directory(directory, directory_flags);
         if (directory_fd < 0)
             return Result<void>::failure(
                 "manifest was published, but parent directory could not be opened for sync: " +
                 errno_message("open parent directory"));
-        if (::fsync(directory_fd) != 0) {
+        if (syscalls_->fsync(directory_fd) != 0) {
             const std::string message = errno_message("fsync parent directory");
-            (void)::close(directory_fd);
+            (void)syscalls_->close(directory_fd);
             return Result<void>::failure(
                 "manifest was published, but parent-directory durability is uncertain: " + message);
         }
-        (void)::close(directory_fd);
+        (void)syscalls_->close(directory_fd);
         return Result<void>::success();
 #else
         return Result<void>::failure("durable manifest save requires POSIX file APIs on this platform");
@@ -411,7 +448,7 @@ Result<std::size_t> ManifestStore::cleanup_stale_temporary_files(
                 if (!error && std::filesystem::is_regular_file(status)) {
                     const auto modified = std::filesystem::last_write_time(candidate, error);
                     if (!error && modified <= cutoff && !process_is_alive(owner)) {
-                        if (std::filesystem::remove(candidate, error)) {
+                        if (syscalls_->remove_path(candidate, error)) {
                             ++removed;
                         } else if (error) {
                             return Result<std::size_t>::failure(
