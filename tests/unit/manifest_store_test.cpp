@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 
 #include <chrono>
+#include <cerrno>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -16,6 +17,7 @@
 #include <unistd.h>
 #endif
 #include <vector>
+#include <memory>
 
 namespace {
 class ManifestStoreTest : public ::testing::Test {
@@ -306,3 +308,148 @@ TEST_F(ManifestStoreTest, RejectsNegativeCleanupAge) {
     const auto cleaned = store.cleanup_stale_temporary_files(std::chrono::seconds(-1));
     EXPECT_FALSE(cleaned);
 }
+
+
+#if defined(__unix__) || defined(__APPLE__)
+TEST_F(ManifestStoreTest, InjectedWriteFailurePreservesOldManifestAndCleansTemp) {
+    const auto path = root_ / "fault.manifest";
+    const dfs::ManifestStore original_store(path);
+    const auto original = sample_manifest();
+    ASSERT_TRUE(original_store.save(original));
+    const auto original_bytes = read_all(path);
+    const std::vector<std::byte> empty;
+    const dfs::FileManifest replacement{"sample-file", 0U, dfs::Checksum::sha256(empty), {}};
+
+    auto syscalls = dfs::make_default_manifest_store_syscalls();
+    auto real_write = syscalls->write;
+    syscalls->write = [real_write](int fd, const void* data, std::size_t size) {
+        if (size >= 3U) {
+            (void)real_write(fd, data, 3U);
+            errno = EIO;
+            return static_cast<std::ptrdiff_t>(-1);
+        }
+        return real_write(fd, data, size);
+    };
+    const dfs::ManifestStore faulty(path, syscalls);
+    const auto result = faulty.save(replacement);
+    EXPECT_FALSE(result);
+    EXPECT_EQ(read_all(path), original_bytes);
+    for (const auto& entry : std::filesystem::directory_iterator(root_))
+        EXPECT_FALSE(entry.path().filename().string().starts_with("fault.manifest.tmp."));
+}
+
+TEST_F(ManifestStoreTest, InjectedFileSyncFailurePreservesOldManifest) {
+    const auto path = root_ / "fault.manifest";
+    ASSERT_TRUE(dfs::ManifestStore(path).save(sample_manifest()));
+    const auto original_bytes = read_all(path);
+    const std::vector<std::byte> empty;
+    const dfs::FileManifest replacement{"sample-file", 0U, dfs::Checksum::sha256(empty), {}};
+
+    auto syscalls = dfs::make_default_manifest_store_syscalls();
+    syscalls->fsync = [](int) { errno = EIO; return -1; };
+    const dfs::ManifestStore faulty(path, syscalls);
+    EXPECT_FALSE(faulty.save(replacement));
+    EXPECT_EQ(read_all(path), original_bytes);
+    for (const auto& entry : std::filesystem::directory_iterator(root_))
+        EXPECT_FALSE(entry.path().filename().string().starts_with("fault.manifest.tmp."));
+}
+
+TEST_F(ManifestStoreTest, InjectedCloseFailurePreservesOldManifest) {
+    const auto path = root_ / "fault.manifest";
+    ASSERT_TRUE(dfs::ManifestStore(path).save(sample_manifest()));
+    const auto original_bytes = read_all(path);
+    const std::vector<std::byte> empty;
+    const dfs::FileManifest replacement{"sample-file", 0U, dfs::Checksum::sha256(empty), {}};
+
+    auto syscalls = dfs::make_default_manifest_store_syscalls();
+    auto real_close = syscalls->close;
+    syscalls->close = [real_close](int fd) {
+        const int result = real_close(fd);
+        if (result == 0) { errno = EIO; return -1; }
+        return result;
+    };
+    const dfs::ManifestStore faulty(path, syscalls);
+    EXPECT_FALSE(faulty.save(replacement));
+    EXPECT_EQ(read_all(path), original_bytes);
+    for (const auto& entry : std::filesystem::directory_iterator(root_))
+        EXPECT_FALSE(entry.path().filename().string().starts_with("fault.manifest.tmp."));
+}
+
+TEST_F(ManifestStoreTest, InjectedRenameFailurePreservesOldManifest) {
+    const auto path = root_ / "fault.manifest";
+    ASSERT_TRUE(dfs::ManifestStore(path).save(sample_manifest()));
+    const auto original_bytes = read_all(path);
+    const std::vector<std::byte> empty;
+    const dfs::FileManifest replacement{"sample-file", 0U, dfs::Checksum::sha256(empty), {}};
+
+    auto syscalls = dfs::make_default_manifest_store_syscalls();
+    syscalls->rename = [](const auto&, const auto&) { errno = EIO; return -1; };
+    const dfs::ManifestStore faulty(path, syscalls);
+    EXPECT_FALSE(faulty.save(replacement));
+    EXPECT_EQ(read_all(path), original_bytes);
+    for (const auto& entry : std::filesystem::directory_iterator(root_))
+        EXPECT_FALSE(entry.path().filename().string().starts_with("fault.manifest.tmp."));
+}
+
+TEST_F(ManifestStoreTest, InjectedParentDirectoryOpenFailureReportsPublishedButUncertain) {
+    const auto path = root_ / "fault.manifest";
+    ASSERT_TRUE(dfs::ManifestStore(path).save(sample_manifest()));
+    const std::vector<std::byte> empty;
+    const dfs::FileManifest replacement{"sample-file", 0U, dfs::Checksum::sha256(empty), {}};
+
+    auto syscalls = dfs::make_default_manifest_store_syscalls();
+    syscalls->open_directory = [](const auto&, int) { errno = EIO; return -1; };
+    const dfs::ManifestStore faulty(path, syscalls);
+    const auto result = faulty.save(replacement);
+    ASSERT_FALSE(result);
+    EXPECT_NE(result.error().find("manifest was published"), std::string::npos);
+    const auto visible = dfs::ManifestStore(path).load();
+    ASSERT_TRUE(visible) << visible.error();
+    EXPECT_EQ(visible.value().total_size_bytes, 0U);
+    EXPECT_TRUE(visible.value().chunks.empty());
+}
+
+TEST_F(ManifestStoreTest, InjectedParentDirectorySyncFailureReportsVisibleManifest) {
+    const auto path = root_ / "fault.manifest";
+    ASSERT_TRUE(dfs::ManifestStore(path).save(sample_manifest()));
+    const std::vector<std::byte> empty;
+    const dfs::FileManifest replacement{"sample-file", 0U, dfs::Checksum::sha256(empty), {}};
+
+    auto syscalls = dfs::make_default_manifest_store_syscalls();
+    auto real_fsync = syscalls->fsync;
+    int call_count = 0;
+    syscalls->fsync = [real_fsync, &call_count](int fd) {
+        ++call_count;
+        if (call_count == 2) { errno = EIO; return -1; }
+        return real_fsync(fd);
+    };
+    const dfs::ManifestStore faulty(path, syscalls);
+    const auto result = faulty.save(replacement);
+    ASSERT_FALSE(result);
+    EXPECT_NE(result.error().find("durability is uncertain"), std::string::npos);
+    const auto visible = dfs::ManifestStore(path).load();
+    ASSERT_TRUE(visible) << visible.error();
+    EXPECT_EQ(visible.value().total_size_bytes, 0U);
+    EXPECT_TRUE(visible.value().chunks.empty());
+}
+
+TEST_F(ManifestStoreTest, InjectedRecoveryRemoveFailureLeavesCandidateAndReportsError) {
+    const dfs::ManifestStore store(root_ / "recovery.manifest");
+    const auto candidate = root_ / "recovery.manifest.tmp.2147483647.11";
+    write_all(candidate, std::vector<char>{'x'});
+    std::error_code error;
+    std::filesystem::last_write_time(
+        candidate, std::filesystem::file_time_type::clock::now() - std::chrono::hours(48), error);
+    ASSERT_FALSE(error);
+
+    auto syscalls = dfs::make_default_manifest_store_syscalls();
+    syscalls->remove_path = [](const auto&, std::error_code& error) {
+        error = std::make_error_code(std::errc::permission_denied);
+        return false;
+    };
+    const dfs::ManifestStore faulty(root_ / "recovery.manifest", syscalls);
+    const auto result = faulty.cleanup_stale_temporary_files(std::chrono::hours(24));
+    EXPECT_FALSE(result);
+    EXPECT_TRUE(std::filesystem::exists(candidate));
+}
+#endif

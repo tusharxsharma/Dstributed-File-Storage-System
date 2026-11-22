@@ -115,6 +115,12 @@ return number removed (repeat calls are idempotent)
   4. `IgnoresMalformedNamesOtherTargetsAndSymlinks`
   5. `RejectsNegativeCleanupAge`
 
+
+
+### Verification follow-up (22 November 2026)
+
+The Day 5 implementation and its five recovery tests were included in the Day 6 pull-request CI suite. GitHub Actions run 44994371354 passed all 40 tests, including the Day 5 recovery cases. This is later verification of the code on the Day 6 tested commit, not a claim that the original Day 5 commit's run was confirmed at the time.
+
 ## 9. Interview questions and answer outlines
 
 1. **Why can't recovery delete every temp file it finds?** A writer may still be using it. Cleanup needs scoped eligibility checks and must avoid active files.

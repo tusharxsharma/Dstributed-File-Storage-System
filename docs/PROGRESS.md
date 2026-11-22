@@ -110,7 +110,7 @@ Day 5: identify and safely clean stale manifest/chunk temporary files, document 
 - Updated architecture, roadmap and learning notes to describe the bounded scope and race limitations.
 
 ### Verification
-- Pending GitHub Actions verification for the implementation commit. Do not mark the milestone green until configure, build and CTest complete.
+- The original Day 5 run was not confirmed at the time. Day 6 PR CI run 44994371354 subsequently included and passed all Day 5 recovery tests as part of the 40-test suite.
 - Local clone/build could not be run in this environment because github.com DNS resolution failed.
 
 ### Known limitations
@@ -123,3 +123,34 @@ Day 5: identify and safely clean stale manifest/chunk temporary files, document 
 
 ### Next milestone
 Day 6: introduce syscall fault injection around manifest write, file fsync, close, rename, directory open/fsync and recovery cleanup. Verify which cases preserve the old destination, which may already publish the new file, and how stale temp recovery should behave.
+
+
+## 2026-11-22 — Day 6: deterministic manifest fault injection
+
+### Implemented
+- Introduced an injectable ManifestStoreSyscalls operations object for temporary-file creation, write, fsync, close, rename, parent-directory open and removal; normal construction uses POSIX wrappers.
+- Routed save publication and stale-temp removal through the seam.
+- Hardened write_all against EINTR, short writes, zero-byte progress and impossible callback byte counts.
+- Added seven tests: partial write failure, file fsync failure, close failure, rename failure, directory-open failure after publication, directory-fsync failure after publication, and stale-temp removal failure.
+- Updated architecture, roadmap and Day 6 learning notes.
+
+### Verification
+- The implementation and tests were pushed in commit f67880d55a2a7a64c4569ade3a6776f14d4e4648.
+- Expected total: 40 tests (33 existing + 7 new), if configure/build/test discovery succeed.
+- Local configure/build/CTest was not performed: github.com DNS resolution failed during clone.
+- GitHub Actions run 44994371354 (C++ CI) verified commit 449f013c773fe763b65c846b9079f5bd5b9bea3a: configure passed, build passed, CTest passed 40/40 tests in 3.69 seconds. Debug CI used AddressSanitizer and UndefinedBehaviorSanitizer.
+
+### Failure-state invariants
+- Write, file fsync, close and rename failures before publication preserve the previous manifest bytes; temp cleanup is attempted.
+- Parent-directory open/fsync failures after rename return an explicit uncertainty error; the new manifest is already potentially visible.
+- Injected recovery-removal failure returns an error and leaves the candidate when removal is denied.
+
+### Known limitations
+- The injection seam covers manifest save and stale-temp removal only, not ChunkStore or FileTransfer.
+- The seam does not prove actual power-loss durability or cross-filesystem semantics.
+- No destination locking or concurrent-writer policy exists yet.
+- PID cleanup limitations from Day 5 remain.
+- No chunk+manifest transaction protocol exists.
+
+### Next milestone
+Day 7: define and test same-chunk and same-manifest concurrency semantics, starting with the smallest local synchronization policy and race-focused tests.
