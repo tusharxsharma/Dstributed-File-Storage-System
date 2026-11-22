@@ -72,3 +72,8 @@ Coordinator / Repair Worker
 ## Day 5 recovery hygiene
 
 ManifestStore can explicitly scan only the sibling temporary-file prefix associated with its target manifest. The sweep requires both an age threshold and a dead owner PID, skips symlinks/non-regular files and malformed names, and is idempotent. It is not invoked automatically by save/load. This is a conservative local policy, not a cross-host lock or proof against every PID-reuse race. ChunkStore temporary-file naming is not covered by this sweep. The deletion itself is best-effort and is not directory-fsync'd.
+
+
+## Day 6: deterministic fault injection
+
+ManifestStore now accepts an injected operations object for temporary-file creation, write, file/directory fsync, close, rename, parent-directory open and recovery removal. Normal construction uses POSIX wrappers. Tests override one operation at a time and assert the pre-rename preservation invariant or the post-rename visible-but-durability-uncertain outcome. This is a test seam, not a new platform-independent durability guarantee. ChunkStore and transfer operations are not covered.
