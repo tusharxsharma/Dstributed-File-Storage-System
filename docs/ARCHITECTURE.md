@@ -1,6 +1,6 @@
 # Architecture
 
-## Current milestone: single-node chunk store, file transfer and manifest persistence
+## Current milestone: single-node chunk store, file transfer, manifest persistence and local recovery
 
 The local storage layer isolates chunk persistence behind ChunkStore. Each chunk is limited to 4 MiB, written to a temporary file, and renamed into place. The record contains a format marker, a SHA-256 digest, and the payload. Chunk IDs are restricted to safe filename characters.
 
@@ -77,3 +77,11 @@ ManifestStore can explicitly scan only the sibling temporary-file prefix associa
 ## Day 6: deterministic fault injection
 
 ManifestStore now accepts an injected operations object for temporary-file creation, write, file/directory fsync, close, rename, parent-directory open and recovery removal. Normal construction uses POSIX wrappers. Tests override one operation at a time and assert the pre-rename preservation invariant or the post-rename visible-but-durability-uncertain outcome. This is a test seam, not a new platform-independent durability guarantee. ChunkStore and transfer operations are not covered.
+
+## Compressed 10-day project scope
+
+Historical implementation days 1–6 map to compressed Project Days 1–4: foundation, file transfer, manifest persistence, then manifest durability/recovery/fault injection. Project Day 5 establishes local same-chunk thread safety. Future milestones use one C++ executable with configurable coordinator/storage-node roles, a gRPC interface, a small metadata catalog, replication/repair, bounded operations and a repeatable Compose demo; Kubernetes and a broad microservice split are intentionally out of scope.
+
+## ChunkStore concurrency contract (Project Day 5)
+
+Within one process, put/get for a chunk ID and normalized root path share a mutex registry, including across separate ChunkStore instances. Same-ID writes are serialized and publish complete records by rename; the policy is last successful publication wins. Temporary names include process ID and a process-local sequence to avoid the earlier sequence-only collision between processes. Across processes, readers still rely on atomic rename and writers remain last-writer-wins; no inter-process lock, multi-chunk upload transaction or file-ID versioning is provided. Concurrent uploads that reuse the same file ID can therefore still overwrite the chunk set referenced by an earlier manifest and must be avoided until versioned publication is implemented.
