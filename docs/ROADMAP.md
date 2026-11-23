@@ -1,29 +1,34 @@
-# 30-Day Roadmap
+# 10-Day Roadmap
 
-A guided implementation plan. Milestones are intentionally small; correctness takes priority over checking off features.
+The original 30-day roadmap has been compressed into a practical 10-project-day plan without dropping the agreed capabilities. Historical Day 1–6 implementation entries and notes are retained for traceability; the authoritative compressed numbering groups the original Day 4–6 durability, recovery and fault-injection work into Project Day 4.
 
-| Days | Focus | Expected outcome |
-|---|---|---|
-| 1 | Foundation | C++20/CMake project, CI, checksum primitive, local chunk-store prototype |
-| 2 | File transfer | Bounded-memory file ingestion, ordered in-memory manifest, verified reconstruction |
-| 3 | Manifest persistence | Versioned, bounded binary manifest format; metadata checksum; safe save/reload validation |
-| 4 | Local durability | Durable ManifestStore publication: file fsync, rename, parent-directory fsync, and unique temp creation |
-| 5 | Recovery hygiene (manifest temps) | Explicit, target-scoped stale manifest-temp sweep with age and owner-PID checks; documented crash states |
-| 6 | Fault injection (manifest publication) | Injectable operations seam; failures at write, file/directory sync, close, rename, directory open and recovery removal; assert visibility/cleanup invariants |
-| 7 | Concurrency | Explicit same-chunk write policy and concurrency tests |
-| 8–9 | Metadata and interface | Metadata model and CLI/API prototype |
-| 10–12 | Node service | Storage-node process and health endpoint |
-| 13–15 | RPC | Protocol Buffers and gRPC between coordinator and nodes |
-| 16–18 | Placement | Chunk placement across nodes and replication factor |
-| 19–21 | Failure handling | Node heartbeats, failure simulation, replica repair |
-| 22–24 | Reliability | Rebalancing, idempotency, bounded queues and backpressure |
-| 25–27 | Operations | Docker Compose, metrics, structured logs, graceful shutdown |
-| 28–30 | Validation and demo | Fault-injection tests, benchmarks, architecture docs, demo walkthrough |
+| Project day | Focus | Expected outcome | Status |
+|---|---|---|---|
+| 1 | Foundation | C++20/CMake, CI, SHA-256 and bounded local ChunkStore | Complete |
+| 2 | File transfer | Streaming upload, ordered manifest, verified reconstruction | Complete |
+| 3 | Metadata persistence | Versioned, bounded and checksummed manifest persistence | Complete |
+| 4 | Durability and recovery | Durable manifest publication, stale-temp recovery and deterministic persistence fault injection | Complete |
+| 5 | Concurrency safety | Defined same-chunk policy, safe temp naming and race-focused tests | In progress |
+| 6 | Service/RPC and metadata interface | Storage service process, protobuf/gRPC API and catalog interface | Next |
+| 7 | Placement and replication | Small placement policy and replication across configured storage nodes | Planned |
+| 8 | Failure handling and repair | Node-health/failure simulation, repair and verification of replica recovery | Planned |
+| 9 | Reliability and operations | Idempotency, bounded work/backpressure, deployment, metrics and operational guidance | Planned |
+| 10 | Integration and demo | Repeatable multi-node demo, integration/fault validation, final docs and measured limits | Planned |
+
+## Scope and deployment model
+
+- One C++ codebase and one deployable executable with coordinator and storage-node roles/configuration; no Kubernetes and no microservice sprawl.
+- gRPC/Protobuf is introduced on Project Day 6, once the storage interface is ready.
+- PostgreSQL is introduced only if the metadata catalog needs durable multi-node state; its integration is scoped to the same system and Compose deployment.
+- Docker Compose and Prometheus (with a small optional Grafana dashboard) are introduced during Project Day 9 when the node topology and metrics exist.
+- Chunk payloads remain bounded by the 4 MiB chunk limit; metadata growth, queues and RPC message sizes must also have explicit limits.
+- SHA-256 integrity checks, durability boundaries, concurrency semantics, fault injection and honest consistency/repair guarantees remain central.
 
 ## Definition of done
 
-- All unit and integration tests pass.
-- Failure modes and consistency limitations are documented.
-- A repeatable local multi-node demo works.
-- Benchmarks state the hardware, workload, and measurement method.
-- No claim of production-grade durability or fault tolerance without corresponding implementation and tests.
+- Configure/build/test can be reproduced with documented commands.
+- A repeatable local multi-node demonstration works with the selected deployment mode.
+- Tests cover integrity, bounded-input rejection, publication/recovery and replica failure/repair.
+- Failure modes, consistency and durability limitations are explicit.
+- Any benchmark states the hardware, workload and measurement method.
+- No claim of production-grade durability, availability or fault tolerance without corresponding implementation and evidence.
