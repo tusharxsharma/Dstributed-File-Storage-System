@@ -4,7 +4,7 @@ A C++20 learning project that grows from a reliable single-node chunk store into
 
 ## Project status
 
-**Phase 1 — Foundation (in progress).** The first milestone establishes the build, interfaces, tests, and design constraints. Distributed features in the roadmap are planned, not implemented yet.
+**Project Days 1–4 complete; Project Day 5 underway.** The single-node storage foundation, file transfer, manifest persistence, manifest durability/recovery and persistence fault-injection are complete. Concurrency hardening and the compressed six-day distributed-system finish remain in progress; see docs/ROADMAP.md and docs/PROGRESS.md for the accurate scope.
 
 ## Planned capabilities
 
@@ -19,7 +19,7 @@ A C++20 learning project that grows from a reliable single-node chunk store into
 - C++20 and CMake
 - GoogleTest
 - OpenSSL Crypto for SHA-256
-- Later phases: gRPC / Protocol Buffers, PostgreSQL, Docker, Prometheus
+- Later milestones: gRPC / Protocol Buffers, PostgreSQL if justified, Docker Compose, Prometheus (and optional Grafana)
 
 ## Build
 

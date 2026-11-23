@@ -5,14 +5,66 @@
 #include <atomic>
 #include <cstdint>
 #include <fstream>
+#include <atomic>
+#include <cstdint>
+#include <fstream>
 #include <limits>
+#include <memory>
+#include <mutex>
+#include <string>
 #include <system_error>
+#include <unordered_map>
+#include <utility>
+
+#if defined(_WIN32)
+#include <process.h>
+#else
+#include <unistd.h>
+#endif
 
 namespace dfs {
 namespace {
 constexpr char kMagic[] = "DFSCHN1";
 constexpr std::size_t kHeaderSize = (sizeof(kMagic) - 1U) + 64U;
 std::atomic_uint64_t g_temp_sequence{0};
+
+std::mutex g_chunk_lock_registry_mutex;
+std::unordered_map<std::string, std::weak_ptr<std::mutex>> g_chunk_lock_registry;
+
+std::uint64_t process_id() noexcept {
+#if defined(_WIN32)
+    return static_cast<std::uint64_t>(_getpid());
+#else
+    return static_cast<std::uint64_t>(getpid());
+#endif
+}
+
+std::shared_ptr<std::mutex> mutex_for_chunk(
+    const std::filesystem::path& root, const std::string& chunk_id) {
+    std::error_code error;
+    const auto absolute_root = std::filesystem::absolute(root, error);
+    const std::string normalized_root =
+        (error ? root : absolute_root).lexically_normal().string();
+    std::string key = normalized_root;
+    key.push_back('\0');
+    key.append(chunk_id);
+
+    std::lock_guard registry_guard(g_chunk_lock_registry_mutex);
+    const auto found = g_chunk_lock_registry.find(key);
+    if (found != g_chunk_lock_registry.end()) {
+        if (auto existing = found->second.lock()) return existing;
+    }
+
+    auto created = std::make_shared<std::mutex>();
+    g_chunk_lock_registry[key] = created;
+    if (g_chunk_lock_registry.size() > 256U) {
+        for (auto it = g_chunk_lock_registry.begin(); it != g_chunk_lock_registry.end();) {
+            if (it->second.expired()) it = g_chunk_lock_registry.erase(it);
+            else ++it;
+        }
+    }
+    return created;
+}
 }
 
 ChunkStore::ChunkStore(std::filesystem::path root) : root_(std::move(root)) {}
@@ -41,11 +93,14 @@ Result<ChunkInfo> ChunkStore::put(const std::string& chunk_id,
     }
 
     try {
+        const auto chunk_mutex = mutex_for_chunk(root_, chunk_id);
+        std::lock_guard chunk_guard(*chunk_mutex);
         std::filesystem::create_directories(root_);
         const std::string digest = Checksum::sha256(data);
         const auto suffix = g_temp_sequence.fetch_add(1, std::memory_order_relaxed);
         const std::filesystem::path temporary =
-            destination.value().string() + ".tmp." + std::to_string(suffix);
+            destination.value().string() + ".tmp." + std::to_string(process_id()) +
+            "." + std::to_string(suffix);
 
         {
             std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
@@ -84,6 +139,8 @@ Result<std::vector<std::byte>> ChunkStore::get(const std::string& chunk_id) cons
     if (!source) return Result<std::vector<std::byte>>::failure(source.error());
 
     try {
+        const auto chunk_mutex = mutex_for_chunk(root_, chunk_id);
+        std::lock_guard chunk_guard(*chunk_mutex);
         std::ifstream input(source.value(), std::ios::binary);
         if (!input) return Result<std::vector<std::byte>>::failure("chunk not found or unreadable");
 
