@@ -162,10 +162,17 @@ Day 7: define and test same-chunk and same-manifest concurrency semantics, start
 - Compressed Project Days 1–4 now group original Day 1 (foundation), Day 2 (file transfer), Day 3 (manifest persistence), and original Days 4–6 (manifest durability, stale-temp recovery and deterministic fault injection).
 - The original chronological entries and learning notes remain as historical evidence; compressed Project Day numbering is authoritative for the remaining six milestones (Days 5–10).
 
-### Project Day 5 implementation (pending CI verification)
+### Project Day 5: concurrency safety (verified and merged)
 - Add process-local per-chunk mutexes keyed by normalized storage root and chunk ID; lock put/get operations across ChunkStore instances sharing that path.
 - Include process ID and atomic sequence in chunk temporary filenames to reduce collisions across processes; publication remains rename-based and same-ID writers use last-writer-wins.
 - Add a concurrent writer/reader test using two ChunkStore instances and bounded small payloads.
 - Link the Threads CMake target.
 - Update architecture, README and the compressed roadmap.
-- Local clone/build remains blocked by DNS resolution of github.com. CI verification on the pull-request head is required before merging or recording this milestone as complete.
+- Local clone/build remains blocked by DNS resolution of github.com. PR-head GitHub Actions run 45124844503 verified configure, build and CTest: 41/41 tests passed in 4.76 seconds, with Debug AddressSanitizer and UndefinedBehaviorSanitizer enabled.
+
+### Project Day 5 verification follow-up (23 November 2026)
+- PR #3 (https://github.com/tusharxsharma/Dstributed-File-Storage-System/pull/3) was squash-merged after PR-head run 45124844503 passed 41/41 tests in 4.76 seconds.
+- Merge commit: 3db133206236686ea355b0d0e5051e8536ee6bef.
+- Post-merge main run 45124951840 also completed successfully; configure, build and test steps passed.
+- The concurrent test covers eight writers across two ChunkStore instances and a reader for one chunk key. This verifies the local process policy, not inter-process locking or multi-chunk upload transactions.
+- The detailed Project Day 5 learning note is local-only at `/mnt/data/dfs-project-notes/docs/learning/DAY-05.md`; it is not committed to the repository pending study.
