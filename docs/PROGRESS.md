@@ -154,3 +154,18 @@ Day 6: introduce syscall fault injection around manifest write, file fsync, clos
 
 ### Next milestone
 Day 7: define and test same-chunk and same-manifest concurrency semantics, starting with the smallest local synchronization policy and race-focused tests.
+
+## 2026-11-23 — Rescope to 10 project days and Day 5 concurrency
+
+### Numbering reconciliation
+- The user requested a 10-day practical scope with four compressed project days complete and six remaining. The repository history actually records six original implementation days.
+- Compressed Project Days 1–4 now group original Day 1 (foundation), Day 2 (file transfer), Day 3 (manifest persistence), and original Days 4–6 (manifest durability, stale-temp recovery and deterministic fault injection).
+- The original chronological entries and learning notes remain as historical evidence; compressed Project Day numbering is authoritative for the remaining six milestones (Days 5–10).
+
+### Project Day 5 implementation (pending CI verification)
+- Add process-local per-chunk mutexes keyed by normalized storage root and chunk ID; lock put/get operations across ChunkStore instances sharing that path.
+- Include process ID and atomic sequence in chunk temporary filenames to reduce collisions across processes; publication remains rename-based and same-ID writers use last-writer-wins.
+- Add a concurrent writer/reader test using two ChunkStore instances and bounded small payloads.
+- Link the Threads CMake target.
+- Update architecture, README and the compressed roadmap.
+- Local clone/build remains blocked by DNS resolution of github.com. CI verification on the pull-request head is required before merging or recording this milestone as complete.
