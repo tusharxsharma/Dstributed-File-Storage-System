@@ -8,7 +8,7 @@ The original 30-day roadmap has been compressed into a practical 10-project-day 
 | 2 | File transfer | Streaming upload, ordered manifest, verified reconstruction | Complete |
 | 3 | Metadata persistence | Versioned, bounded and checksummed manifest persistence | Complete |
 | 4 | Durability and recovery | Durable manifest publication, stale-temp recovery and deterministic persistence fault injection | Complete |
-| 5 | Concurrency safety | Defined same-chunk policy, safe temp naming and race-focused tests | In progress |
+| 5 | Concurrency safety | Defined same-chunk policy, safe temp naming and race-focused tests | Complete |
 | 6 | Service/RPC and metadata interface | Storage service process, protobuf/gRPC API and catalog interface | Next |
 | 7 | Placement and replication | Small placement policy and replication across configured storage nodes | Planned |
 | 8 | Failure handling and repair | Node-health/failure simulation, repair and verification of replica recovery | Planned |
