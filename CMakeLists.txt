@@ -14,6 +14,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(OpenSSL REQUIRED COMPONENTS Crypto)
+find_package(Threads REQUIRED)
 
 add_library(dfs_core
     src/core/chunk_store.cpp
@@ -22,7 +23,7 @@ add_library(dfs_core
     src/common/checksum.cpp
 )
 target_include_directories(dfs_core PUBLIC include)
-target_link_libraries(dfs_core PUBLIC OpenSSL::Crypto)
+target_link_libraries(dfs_core PUBLIC OpenSSL::Crypto Threads::Threads)
 
 if(DFS_ENABLE_WARNINGS)
     if(MSVC)
