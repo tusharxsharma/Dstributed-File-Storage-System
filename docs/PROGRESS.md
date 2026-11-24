@@ -204,3 +204,8 @@ Day 7: define and test same-chunk and same-manifest concurrency semantics, start
 
 ### Next milestone
 Project Day 7: make the storage-node process configurable and lifecycle-managed, preserving the CLI/service facade and storage/catalog primitives rather than rewriting them.
+
+
+### Project Day 6 post-merge verification follow-up
+- PR #4 (https://github.com/tusharxsharma/Dstributed-File-Storage-System/pull/4) was squash-merged into main as commit 0e19f91123c909be6a60dd2e32b3ae38e850a1eb.
+- Post-merge GitHub Actions run 45341128048 completed successfully: configure and build passed; CTest passed 48/48 tests in 3.46 seconds, with Debug AddressSanitizer and UndefinedBehaviorSanitizer enabled.
