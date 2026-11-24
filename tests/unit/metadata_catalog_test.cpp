@@ -69,5 +69,3 @@ TEST_F(MetadataCatalogTest, RejectsManifestWhoseFileIdDoesNotMatchCatalogKey) {
     EXPECT_FALSE(loaded);
     EXPECT_NE(loaded.error().find("does not match catalog key"), std::string::npos);
 }
-
-} // namespace
