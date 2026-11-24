@@ -9,7 +9,7 @@ The original 30-day roadmap was compressed to ten project days. Historical origi
 | 3 | Metadata persistence | Versioned, bounded and checksummed manifest persistence | Complete |
 | 4 | Durability and recovery | Durable manifest publication, stale-temp recovery and deterministic persistence fault injection | Complete |
 | 5 | Concurrency safety | Defined same-chunk policy, safe temp naming and race-focused tests | Complete |
-| 6 | Metadata and user interface | Local manifest catalog, storage facade, CLI upload/download/list/inspect | In progress |
+| 6 | Metadata and user interface | Local manifest catalog, storage facade, CLI upload/download/list/inspect | Complete |
 | 7 | Storage-node process | Single-process storage node, configuration, lifecycle and local node interface | Planned |
 | 8 | RPC, placement and replication | RPC boundary, simple placement and replication across configured nodes | Planned |
 | 9 | Failure handling and repair | Node-failure simulation, repair and replica integrity verification | Planned |

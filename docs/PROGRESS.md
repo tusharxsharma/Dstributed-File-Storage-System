@@ -178,7 +178,7 @@ Day 7: define and test same-chunk and same-manifest concurrency semantics, start
 - The detailed Project Day 5 learning note is local-only at `/mnt/data/dfs-project-notes/docs/learning/DAY-05.md`; it is not committed to the repository pending study.
 
 
-## 2026-11-24 — Project Day 6: metadata catalog and local CLI (CI pending)
+## 2026-11-24 — Project Day 6: metadata catalog and local CLI (verified)
 
 ### Reconciliation and scope
 - Project Day 5 concurrency safety was already completed and merged on 23 November; it is not recreated.
@@ -193,7 +193,9 @@ Day 7: define and test same-chunk and same-manifest concurrency semantics, start
 - Update CMake, README, architecture and roadmap.
 
 ### Verification
-- Local configure/build/CTest could not be performed: DNS resolution of github.com is unavailable in this environment. CI verification is pending on the milestone pull request; the milestone is not yet marked complete.
+- Local configure/build/CTest could not be performed because DNS resolution of github.com is unavailable in this environment.
+- GitHub Actions run 45340961824 verified commit 4e216c70c6f4701b2c98de8d3e5840d10f98c40c: configure and build passed; CTest passed all 48/48 tests in 3.66 seconds. Debug CI enabled AddressSanitizer and UndefinedBehaviorSanitizer.
+- Two initial PR CI attempts exposed stray closing namespace lines in the new test files; both were corrected before this successful run.
 
 ### Limitations
 - Metadata is one local manifest file per ID; no database, versions, ACLs, transaction across chunk and manifest publication, or orphan-chunk collection.
