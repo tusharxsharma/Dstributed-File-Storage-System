@@ -79,5 +79,3 @@ TEST_F(StorageServiceTest, PropagatesMissingSourceAndMetadataErrors) {
     EXPECT_FALSE(service.download("absent-id", root_ / "out.bin"));
     EXPECT_FALSE(service.metadata("../unsafe"));
 }
-
-} // namespace
