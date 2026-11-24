@@ -50,3 +50,24 @@ docs/              Architecture, decisions, and roadmap
 4. Do not claim distributed guarantees until replication, recovery, and consistency behaviour are implemented and tested.
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+
+## Local CLI (Project Day 6)
+
+After building, the `dfs_cli` executable accepts a storage-root directory and one command:
+
+```bash
+# List metadata catalog entries
+./build/dfs_cli ./data list
+
+# Upload a local file using a safe file ID
+./build/dfs_cli ./data upload file-001 ./input.bin
+
+# Inspect persisted metadata and chunk references
+./build/dfs_cli ./data inspect file-001
+
+# Reconstruct a file from its manifest and verified chunks
+./build/dfs_cli ./data download file-001 ./restored.bin
+```
+
+The root contains separate `chunks/` and `metadata/` directories. This interface is local and single-process for now; the network storage-node/RPC boundary is a later milestone.
