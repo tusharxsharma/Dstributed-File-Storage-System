@@ -4,7 +4,7 @@ A C++20 learning project that grows from a reliable single-node chunk store into
 
 ## Project status
 
-**Project Days 1–5 complete; Project Days 6–10 remain.** The single-node storage foundation, file transfer, manifest persistence, manifest durability/recovery, persistence fault-injection and local same-chunk concurrency policy are complete. The service/RPC, replication, repair, operations and demo milestones remain; see docs/ROADMAP.md and docs/PROGRESS.md.
+**Project Days 1–6 complete; Project Days 7–10 remain.** The single-node storage foundation, file transfer, manifest persistence, manifest durability/recovery, persistence fault-injection and local same-chunk concurrency policy are complete. The storage-node process, RPC, placement/replication, repair, operations and demo milestones remain; see docs/ROADMAP.md and docs/PROGRESS.md.
 
 ## Planned capabilities
 
@@ -50,3 +50,24 @@ docs/              Architecture, decisions, and roadmap
 4. Do not claim distributed guarantees until replication, recovery, and consistency behaviour are implemented and tested.
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+
+## Local CLI (Project Day 6)
+
+After building, the `dfs_cli` executable accepts a storage-root directory and one command:
+
+```bash
+# List metadata catalog entries
+./build/dfs_cli ./data list
+
+# Upload a local file using a safe file ID
+./build/dfs_cli ./data upload file-001 ./input.bin
+
+# Inspect persisted metadata and chunk references
+./build/dfs_cli ./data inspect file-001
+
+# Reconstruct a file from its manifest and verified chunks
+./build/dfs_cli ./data download file-001 ./restored.bin
+```
+
+The root contains separate `chunks/` and `metadata/` directories. This interface is local and single-process for now; the network storage-node/RPC boundary is a later milestone.

@@ -1,6 +1,6 @@
 # 10-Day Roadmap
 
-The original 30-day roadmap has been compressed into a practical 10-project-day plan without dropping the agreed capabilities. Historical Day 1–6 implementation entries and notes are retained for traceability; the authoritative compressed numbering groups the original Day 4–6 durability, recovery and fault-injection work into Project Day 4.
+The original 30-day roadmap was compressed to ten project days. Historical original Day 1–6 implementation entries and learning notes remain for traceability; compressed Project Days 1–4 group the original foundation, file transfer, manifest persistence, durability, recovery and fault-injection work. Project Day 5 concurrency safety was completed and merged on 23 November 2026. The remaining milestones are scheduled through 28 November, with 29 November reserved for final buffer and deadline reporting.
 
 | Project day | Focus | Expected outcome | Status |
 |---|---|---|---|
@@ -9,19 +9,28 @@ The original 30-day roadmap has been compressed into a practical 10-project-day 
 | 3 | Metadata persistence | Versioned, bounded and checksummed manifest persistence | Complete |
 | 4 | Durability and recovery | Durable manifest publication, stale-temp recovery and deterministic persistence fault injection | Complete |
 | 5 | Concurrency safety | Defined same-chunk policy, safe temp naming and race-focused tests | Complete |
-| 6 | Service/RPC and metadata interface | Storage service process, protobuf/gRPC API and catalog interface | Next |
-| 7 | Placement and replication | Small placement policy and replication across configured storage nodes | Planned |
-| 8 | Failure handling and repair | Node-health/failure simulation, repair and verification of replica recovery | Planned |
-| 9 | Reliability and operations | Idempotency, bounded work/backpressure, deployment, metrics and operational guidance | Planned |
-| 10 | Integration and demo | Repeatable multi-node demo, integration/fault validation, final docs and measured limits | Planned |
+| 6 | Metadata and user interface | Local manifest catalog, storage facade, CLI upload/download/list/inspect | Complete |
+| 7 | Storage-node process | Single-process storage node, configuration, lifecycle and local node interface | Planned |
+| 8 | RPC, placement and replication | RPC boundary, simple placement and replication across configured nodes | Planned |
+| 9 | Failure handling and repair | Node-failure simulation, repair and replica integrity verification | Planned |
+| 10 | Operations and integration | Repeatable multi-node demo, bounded operations, metrics, docs and final validation | Planned |
+
+## Schedule
+
+- **24 November:** Project Day 6 — metadata catalog and local CLI.
+- **25 November:** Project Day 7 — storage-node process and lifecycle.
+- **26 November:** Project Day 8 — RPC, placement and replication.
+- **27 November:** Project Day 9 — failure handling and repair.
+- **28 November:** Project Day 10 — operations, integration and demo validation.
+- **29 November:** deadline buffer; no new milestone unless needed to fix a blocker.
 
 ## Scope and deployment model
 
-- One C++ codebase and one deployable executable with coordinator and storage-node roles/configuration; no Kubernetes and no microservice sprawl.
-- gRPC/Protobuf is introduced on Project Day 6, once the storage interface is ready.
-- PostgreSQL is introduced only if the metadata catalog needs durable multi-node state; its integration is scoped to the same system and Compose deployment.
-- Docker Compose and Prometheus (with a small optional Grafana dashboard) are introduced during Project Day 9 when the node topology and metrics exist.
-- Chunk payloads remain bounded by the 4 MiB chunk limit; metadata growth, queues and RPC message sizes must also have explicit limits.
+- One C++ codebase and one deployable system with configurable process roles; no Kubernetes and no microservice sprawl.
+- Keep a local CLI/catalog as the baseline interface. RPC is introduced only when the node boundary and replication path are ready.
+- PostgreSQL is introduced only if durable shared metadata needs justify it; do not add a database merely for the demo.
+- Docker Compose and Prometheus (with optional Grafana) are introduced during the operations milestone only if they make the repeatable demo and observability materially better.
+- Chunk payloads remain bounded by the 4 MiB limit; metadata growth, queues and RPC message sizes must also have explicit limits.
 - SHA-256 integrity checks, durability boundaries, concurrency semantics, fault injection and honest consistency/repair guarantees remain central.
 
 ## Definition of done
