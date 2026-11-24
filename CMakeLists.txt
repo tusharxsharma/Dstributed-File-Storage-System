@@ -20,6 +20,8 @@ add_library(dfs_core
     src/core/chunk_store.cpp
     src/core/file_transfer.cpp
     src/core/manifest_store.cpp
+    src/service/metadata_catalog.cpp
+    src/service/storage_service.cpp
     src/common/checksum.cpp
 )
 target_include_directories(dfs_core PUBLIC include)
@@ -39,6 +41,9 @@ if(DFS_ENABLE_SANITIZERS AND NOT MSVC)
 endif()
 
 include(CTest)
+add_executable(dfs_cli src/app/main.cpp)
+target_link_libraries(dfs_cli PRIVATE dfs_core)
+
 if(BUILD_TESTING)
     include(FetchContent)
     FetchContent_Declare(
@@ -53,6 +58,8 @@ if(BUILD_TESTING)
         tests/unit/chunk_store_test.cpp
         tests/unit/file_transfer_test.cpp
         tests/unit/manifest_store_test.cpp
+        tests/unit/metadata_catalog_test.cpp
+        tests/unit/storage_service_test.cpp
     )
     target_link_libraries(dfs_tests PRIVATE dfs_core GTest::gtest_main)
     include(GoogleTest)

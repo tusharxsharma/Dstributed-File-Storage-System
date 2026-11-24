@@ -176,3 +176,29 @@ Day 7: define and test same-chunk and same-manifest concurrency semantics, start
 - Post-merge main run 45124951840 also completed successfully; configure, build and test steps passed.
 - The concurrent test covers eight writers across two ChunkStore instances and a reader for one chunk key. This verifies the local process policy, not inter-process locking or multi-chunk upload transactions.
 - The detailed Project Day 5 learning note is local-only at `/mnt/data/dfs-project-notes/docs/learning/DAY-05.md`; it is not committed to the repository pending study.
+
+
+## 2026-11-24 — Project Day 6: metadata catalog and local CLI (CI pending)
+
+### Reconciliation and scope
+- Project Day 5 concurrency safety was already completed and merged on 23 November; it is not recreated.
+- Today's compressed Project Day 6 introduces a small metadata catalog, a storage-service facade over the existing primitives, and a local CLI. RPC and the storage-node process are deliberately deferred to Project Days 7–8.
+
+### Implemented on the milestone branch
+- Add `MetadataCatalog` for bounded/checksummed manifest save/load and sorted file-ID listing; catalog keys are safe IDs and loads verify the manifest key matches the requested ID.
+- Serialize same-manifest catalog save/load within the process using a path-keyed mutex registry; this is not inter-process locking.
+- Add `StorageService` upload/download/metadata/list operations, composing the existing chunk store, transfer and catalog.
+- Add `dfs_cli` commands: `list`, `upload`, `download`, and `inspect`.
+- Add catalog and storage-service tests for persistence, listing, unsafe/mismatched IDs, empty files, upload/download reconstruction and error propagation.
+- Update CMake, README, architecture and roadmap.
+
+### Verification
+- Local configure/build/CTest could not be performed: DNS resolution of github.com is unavailable in this environment. CI verification is pending on the milestone pull request; the milestone is not yet marked complete.
+
+### Limitations
+- Metadata is one local manifest file per ID; no database, versions, ACLs, transaction across chunk and manifest publication, or orphan-chunk collection.
+- Catalog locking is process-local. The CLI is a local interface, not a network service.
+- Reusing a file ID replaces chunk and manifest names. Concurrent file-ID uploads and cross-process writers are not coordinated.
+
+### Next milestone
+Project Day 7: make the storage-node process configurable and lifecycle-managed, preserving the CLI/service facade and storage/catalog primitives rather than rewriting them.

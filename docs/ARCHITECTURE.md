@@ -85,3 +85,10 @@ Historical implementation days 1–6 map to compressed Project Days 1–4: found
 ## ChunkStore concurrency contract (Project Day 5)
 
 Within one process, put/get for a chunk ID and normalized root path share a mutex registry, including across separate ChunkStore instances. Same-ID writes are serialized and publish complete records by rename; the policy is last successful publication wins. Temporary names include process ID and a process-local sequence to avoid the earlier sequence-only collision between processes. Across processes, readers still rely on atomic rename and writers remain last-writer-wins; no inter-process lock, multi-chunk upload transaction or file-ID versioning is provided. Concurrent uploads that reuse the same file ID can therefore still overwrite the chunk set referenced by an earlier manifest and must be avoided until versioned publication is implemented.
+
+
+## Project Day 6 — local service facade, metadata catalog and CLI
+
+A small `MetadataCatalog` stores one checksummed manifest per safe file ID under a metadata directory. The `StorageService` facade composes the existing `ChunkStore`, `FileTransfer` and catalog. The `dfs_cli` executable exposes upload, download, list and inspect commands over a local storage root. This is a local interface only; RPC and the storage-node process are later milestones.
+
+Metadata save occurs after chunk ingestion. If metadata publication fails, stored chunks can be orphaned; no cross-component transaction or orphan reclamation exists. Reusing a file ID replaces its manifest/chunk names, so versioning and multi-writer upload transactions remain out of scope. The catalog uses process-local per-manifest locks, not inter-process locking.
