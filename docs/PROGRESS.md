@@ -232,3 +232,8 @@ Project Day 7: make the storage-node process configurable and lifecycle-managed,
 
 ### Next milestone
 Project Day 8: introduce RPC, simple placement and replication across the storage-node boundary, keeping the deployment model single-system and bounded.
+
+
+### Project Day 7 post-merge verification
+- PR #5 was squash-merged into main as commit a7926d1448b559d4e864f6a2fa2911cc2b8ce86e.
+- Post-merge GitHub Actions run 45562816481 completed successfully: configure and build passed; CTest passed 54/54 tests (100%) in 5.21 seconds. Debug CI enabled AddressSanitizer and UndefinedBehaviorSanitizer.
