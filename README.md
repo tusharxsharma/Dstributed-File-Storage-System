@@ -4,7 +4,7 @@ A C++20 learning project that grows from a reliable single-node chunk store into
 
 ## Project status
 
-**Project Days 1–6 complete; Project Day 7 is in progress.** The single-node storage foundation, file transfer, manifest persistence, manifest durability/recovery, persistence fault-injection and local same-chunk concurrency policy are complete. The storage-node process, RPC, placement/replication, repair, operations and demo milestones remain; see docs/ROADMAP.md and docs/PROGRESS.md.
+**Project Days 1–7 complete; Project Days 8–10 remain.** The single-node storage foundation, file transfer, manifest persistence, manifest durability/recovery, persistence fault-injection and local same-chunk concurrency policy are complete. The storage-node process, RPC, placement/replication, repair, operations and demo milestones remain; see docs/ROADMAP.md and docs/PROGRESS.md.
 
 ## Planned capabilities
 
