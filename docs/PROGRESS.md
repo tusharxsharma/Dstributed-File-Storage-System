@@ -211,7 +211,7 @@ Project Day 7: make the storage-node process configurable and lifecycle-managed,
 - Post-merge GitHub Actions run 45341128048 completed successfully: configure and build passed; CTest passed 48/48 tests in 3.46 seconds, with Debug AddressSanitizer and UndefinedBehaviorSanitizer enabled.
 
 
-## 2026-11-25 — Project Day 7: configurable storage-node process (CI pending)
+## 2026-11-25 — Project Day 7: configurable storage-node process (PR CI verified)
 
 ### Implemented on the milestone branch
 - Add `StorageNode` as a small wrapper around the existing `ChunkStore`, with safe node IDs, root initialization, a persisted node-identity marker and a configurable payload-byte capacity.
@@ -221,9 +221,10 @@ Project Day 7: make the storage-node process configurable and lifecycle-managed,
 - Add tests for identity persistence/mismatch, replacement-aware quota accounting, invalid IDs and size, corrupt-chunk replacement rejection, missing chunks and concurrent same-root quota enforcement.
 - Update CMake, README and architecture docs.
 
-### Verification pending
-- Local clone/build remains unavailable because github.com DNS resolution failed in this environment.
-- PR-head GitHub Actions configure/build/CTest will be the verification gate before merging.
+### Verification
+- Local configure/build/CTest was unavailable because github.com DNS resolution failed in this environment.
+- PR-head GitHub Actions run 45562363411 verified commit 9ba309c23be5b65ef91e3f915bceb1e3652bcf47: configure and build passed; CTest passed 54/54 tests (100%) in 6.92 seconds. Debug CI enabled AddressSanitizer and UndefinedBehaviorSanitizer.
+- PR #5 is ready to merge; post-merge CI verification will be recorded separately.
 
 ### Limitations
 - Quota locking is process-local; separate processes or hosts can race capacity checks. The scan counts payload bytes from record sizes and ignores filesystem overhead and temporary files. It does not validate every checksum during status.
