@@ -209,3 +209,26 @@ Project Day 7: make the storage-node process configurable and lifecycle-managed,
 ### Project Day 6 post-merge verification follow-up
 - PR #4 (https://github.com/tusharxsharma/Dstributed-File-Storage-System/pull/4) was squash-merged into main as commit 0e19f91123c909be6a60dd2e32b3ae38e850a1eb.
 - Post-merge GitHub Actions run 45341128048 completed successfully: configure and build passed; CTest passed 48/48 tests in 3.46 seconds, with Debug AddressSanitizer and UndefinedBehaviorSanitizer enabled.
+
+
+## 2026-11-25 — Project Day 7: configurable storage-node process (PR CI verified)
+
+### Implemented on the milestone branch
+- Add `StorageNode` as a small wrapper around the existing `ChunkStore`, with safe node IDs, root initialization, a persisted node-identity marker and a configurable payload-byte capacity.
+- Add node status reporting for payload usage, available capacity and chunk count by scanning regular chunk records.
+- Serialize quota checks and writes across same-process `StorageNode` instances sharing a normalized root. Verify an existing chunk before allowing replacement; reject corrupt/unreadable records rather than silently replacing them.
+- Add `dfs_node`, a foreground console process with `status`, `put`, `get`, `help` and `quit`; the CLI bounds file input to one 4 MiB chunk and publishes retrieved output via a temporary file.
+- Add tests for identity persistence/mismatch, replacement-aware quota accounting, invalid IDs and size, corrupt-chunk replacement rejection, missing chunks and concurrent same-root quota enforcement.
+- Update CMake, README and architecture docs.
+
+### Verification
+- Local configure/build/CTest was unavailable because github.com DNS resolution failed in this environment.
+- PR-head GitHub Actions run 45562363411 verified commit 9ba309c23be5b65ef91e3f915bceb1e3652bcf47: configure and build passed; CTest passed 54/54 tests (100%) in 6.92 seconds. Debug CI enabled AddressSanitizer and UndefinedBehaviorSanitizer.
+- PR #5 is ready to merge; post-merge CI verification will be recorded separately.
+
+### Limitations
+- Quota locking is process-local; separate processes or hosts can race capacity checks. The scan counts payload bytes from record sizes and ignores filesystem overhead and temporary files. It does not validate every checksum during status.
+- Node identity creation is atomic-name publication but not fsync'd; ChunkStore retains its existing durability contract. The console is not a network listener and does not provide RPC, replication or file-level manifest operations.
+
+### Next milestone
+Project Day 8: introduce RPC, simple placement and replication across the storage-node boundary, keeping the deployment model single-system and bounded.

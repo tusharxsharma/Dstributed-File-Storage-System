@@ -4,7 +4,7 @@ A C++20 learning project that grows from a reliable single-node chunk store into
 
 ## Project status
 
-**Project Days 1–6 complete; Project Days 7–10 remain.** The single-node storage foundation, file transfer, manifest persistence, manifest durability/recovery, persistence fault-injection and local same-chunk concurrency policy are complete. The storage-node process, RPC, placement/replication, repair, operations and demo milestones remain; see docs/ROADMAP.md and docs/PROGRESS.md.
+**Project Days 1–7 complete; Project Days 8–10 remain.** The single-node storage foundation, file transfer, manifest persistence, manifest durability/recovery, persistence fault-injection and local same-chunk concurrency policy are complete. The storage-node process, RPC, placement/replication, repair, operations and demo milestones remain; see docs/ROADMAP.md and docs/PROGRESS.md.
 
 ## Planned capabilities
 
@@ -71,3 +71,18 @@ After building, the `dfs_cli` executable accepts a storage-root directory and on
 ```
 
 The root contains separate `chunks/` and `metadata/` directories. This interface is local and single-process for now; the network storage-node/RPC boundary is a later milestone.
+
+
+## Storage node console (Project Day 7)
+
+`dfs_node` runs a configurable storage-node process in the foreground. It persists its node identity in the root and enforces a payload-byte capacity across chunk files (capacity checks are serialized among instances in the same process using the same normalized root).
+
+```bash
+# Start a node with a 1 GiB payload capacity (default)
+./build/dfs_node node-a ./nodes/node-a
+
+# Optional capacity argument, in payload bytes
+./build/dfs_node node-b ./nodes/node-b 10485760
+```
+
+At the `dfs-node>` prompt, use `status`, `put CHUNK_ID SOURCE_FILE`, `get CHUNK_ID DESTINATION_FILE`, `help`, or `quit`. The console accepts paths without spaces. `put` and `get` operate on one bounded chunk (maximum 4 MiB), not file-level manifests. This is a local node API and process lifecycle; network transport, cross-process quota coordination, and power-loss durability of the node identity are not provided yet.

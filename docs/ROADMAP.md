@@ -10,7 +10,7 @@ The original 30-day roadmap was compressed to ten project days. Historical origi
 | 4 | Durability and recovery | Durable manifest publication, stale-temp recovery and deterministic persistence fault injection | Complete |
 | 5 | Concurrency safety | Defined same-chunk policy, safe temp naming and race-focused tests | Complete |
 | 6 | Metadata and user interface | Local manifest catalog, storage facade, CLI upload/download/list/inspect | Complete |
-| 7 | Storage-node process | Single-process storage node, configuration, lifecycle and local node interface | Planned |
+| 7 | Storage-node process | Single-process storage node, configuration, lifecycle and local node interface | Complete |
 | 8 | RPC, placement and replication | RPC boundary, simple placement and replication across configured nodes | Planned |
 | 9 | Failure handling and repair | Node-failure simulation, repair and replica integrity verification | Planned |
 | 10 | Operations and integration | Repeatable multi-node demo, bounded operations, metrics, docs and final validation | Planned |
@@ -18,7 +18,7 @@ The original 30-day roadmap was compressed to ten project days. Historical origi
 ## Schedule
 
 - **24 November:** Project Day 6 — metadata catalog and local CLI.
-- **25 November:** Project Day 7 — storage-node process and lifecycle.
+- **25 November:** Project Day 7 — storage-node process and lifecycle (PR CI verified; post-merge CI follow-up).
 - **26 November:** Project Day 8 — RPC, placement and replication.
 - **27 November:** Project Day 9 — failure handling and repair.
 - **28 November:** Project Day 10 — operations, integration and demo validation.

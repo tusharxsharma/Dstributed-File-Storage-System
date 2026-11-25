@@ -22,6 +22,7 @@ add_library(dfs_core
     src/core/manifest_store.cpp
     src/service/metadata_catalog.cpp
     src/service/storage_service.cpp
+    src/service/storage_node.cpp
     src/common/checksum.cpp
 )
 target_include_directories(dfs_core PUBLIC include)
@@ -44,6 +45,9 @@ include(CTest)
 add_executable(dfs_cli src/app/main.cpp)
 target_link_libraries(dfs_cli PRIVATE dfs_core)
 
+add_executable(dfs_node src/app/node_main.cpp)
+target_link_libraries(dfs_node PRIVATE dfs_core)
+
 if(BUILD_TESTING)
     include(FetchContent)
     FetchContent_Declare(
@@ -60,6 +64,7 @@ if(BUILD_TESTING)
         tests/unit/manifest_store_test.cpp
         tests/unit/metadata_catalog_test.cpp
         tests/unit/storage_service_test.cpp
+        tests/unit/storage_node_test.cpp
     )
     target_link_libraries(dfs_tests PRIVATE dfs_core GTest::gtest_main)
     include(GoogleTest)
