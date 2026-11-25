@@ -92,3 +92,12 @@ Within one process, put/get for a chunk ID and normalized root path share a mute
 A small `MetadataCatalog` stores one checksummed manifest per safe file ID under a metadata directory. The `StorageService` facade composes the existing `ChunkStore`, `FileTransfer` and catalog. The `dfs_cli` executable exposes upload, download, list and inspect commands over a local storage root. This is a local interface only; RPC and the storage-node process are later milestones.
 
 Metadata save occurs after chunk ingestion. If metadata publication fails, stored chunks can be orphaned; no cross-component transaction or orphan reclamation exists. Reusing a file ID replaces its manifest/chunk names, so versioning and multi-writer upload transactions remain out of scope. The catalog uses process-local per-manifest locks, not inter-process locking.
+
+
+## Project Day 7 — configurable local storage-node process
+
+`StorageNode` wraps the existing `ChunkStore` under a node-specific `chunks/` directory. Initialization creates the directories and writes a versioned identity marker (`node-id`); a root registered to a different or malformed node identity is rejected. The node configuration contains a safe node ID, root and payload-byte capacity. The `dfs_node` executable runs in the foreground with a simple console for `status`, `put`, `get`, `help` and `quit`.
+
+Capacity accounting scans regular `.chunk` records and subtracts the fixed record header (7-byte magic plus 64-byte SHA-256) to count payload bytes. A put is serialized by a process-local mutex keyed by normalized node root, scans existing usage, verifies an existing chunk before replacing it, and checks the projected payload usage before delegating to `ChunkStore::put`. Status reports capacity, used, available and chunk count. Reads continue through ChunkStore's checksum verification.
+
+This is a local node boundary only. Quota locks do not coordinate other processes or hosts; temporary files and filesystem overhead are excluded from quota; status does not checksum every stored chunk; the identity marker is not fsync'd; and chunk publication retains ChunkStore's existing durability limitations. The console is intentionally not an RPC server; network transport and placement/replication follow in Project Day 8.
