@@ -4,7 +4,7 @@ A C++20 learning project that grows from a reliable single-node chunk store into
 
 ## Project status
 
-**Project Days 1–7 complete; Project Days 8–10 remain.** The single-node storage foundation, file transfer, manifest persistence, manifest durability/recovery, persistence fault-injection and local same-chunk concurrency policy are complete. The storage-node process, RPC, placement/replication, repair, operations and demo milestones remain; see docs/ROADMAP.md and docs/PROGRESS.md.
+**Project Days 1–7 complete; Project Day 8 RPC/placement/replication is in progress. Days 9–10 remain.** The single-node storage foundation, file transfer, manifest persistence, manifest durability/recovery, persistence fault-injection and local same-chunk concurrency policy are complete. The storage-node process, RPC, placement/replication, repair, operations and demo milestones remain; see docs/ROADMAP.md and docs/PROGRESS.md.
 
 ## Planned capabilities
 
@@ -86,3 +86,23 @@ The root contains separate `chunks/` and `metadata/` directories. This interface
 ```
 
 At the `dfs-node>` prompt, use `status`, `put CHUNK_ID SOURCE_FILE`, `get CHUNK_ID DESTINATION_FILE`, `help`, or `quit`. The console accepts paths without spaces. `put` and `get` operate on one bounded chunk (maximum 4 MiB), not file-level manifests. This is a local node API and process lifecycle; network transport, cross-process quota coordination, and power-loss durability of the node identity are not provided yet.
+
+
+## TCP RPC storage nodes (Project Day 8 — CI verification pending)
+
+Start a node RPC server in the foreground (IPv4 host and port; port 0 selects a free port and reports it):
+
+```bash
+./build/dfs_rpc_node node-a ./nodes/node-a 127.0.0.1 7101
+./build/dfs_rpc_node node-b ./nodes/node-b 127.0.0.1 7102
+```
+
+The server accepts `quit` on stdin to stop. For a one-chunk replicated write/read, configure endpoints in the command line:
+
+```bash
+# Replicate chunk-001 to two of the three nodes in the supplied order
+./build/dfs_cluster_cli put chunk-001 ./chunk.bin 2 node-a 127.0.0.1 7101 node-b 127.0.0.1 7102 node-c 127.0.0.1 7103
+./build/dfs_cluster_cli get chunk-001 ./restored.bin 2 node-a 127.0.0.1 7101 node-b 127.0.0.1 7102 node-c 127.0.0.1 7103
+```
+
+This RPC prototype handles individual chunks, not a distributed file-manifest upload. Placement is deterministic for the same ordered node list and replication factor; it is not persisted or versioned. Reads fall back across selected replicas. A replication write reports incomplete if any selected replica fails, but it does not roll back partial successes. The custom TCP protocol is plaintext and unauthenticated; do not expose it to untrusted networks.
