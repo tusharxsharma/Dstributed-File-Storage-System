@@ -89,9 +89,13 @@ TEST_F(StorageNodeRpcTest, ReplicationStoresOnDistinctSelectedNodes) {
 }
 
 TEST_F(StorageNodeRpcTest, RetrievalFallsBackToSecondReplicaWhenFirstIsStopped) {
-    const auto a = add_node("node-a");
-    const auto b = add_node("node-b");
-    const auto c = add_node("node-c");
+    const auto ar = add_node("node-a");
+    const auto br = add_node("node-b");
+    const auto cr = add_node("node-c");
+    ASSERT_TRUE(ar) << ar.error();
+    ASSERT_TRUE(br) << br.error();
+    ASSERT_TRUE(cr) << cr.error();
+    const auto a = ar.value(), b = br.value(), c = cr.value();
     dfs::DistributedChunkService cluster({a, b, c}, 2U);
     const auto targets = cluster.placement("fallback");
     ASSERT_TRUE(targets) << targets.error();
