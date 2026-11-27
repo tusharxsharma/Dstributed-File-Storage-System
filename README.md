@@ -4,22 +4,24 @@ A C++20 learning project that grows from a reliable single-node chunk store into
 
 ## Project status
 
-**Project Days 1–9 complete; Project Day 10 repeatable operations demo added on a review branch.** See docs/ROADMAP.md, docs/PROGRESS.md and docs/OPERATIONS-DEMO.md. Day 10 execution/CI verification is pending.
+**Project Days 1–10 complete.** Day 10 was merged to `main`; GitHub Actions run 45978986022 passed configure, build, 65/65 tests, and the three-node demo. See [progress](docs/PROGRESS.md), [roadmap](docs/ROADMAP.md), and [operations demo](docs/OPERATIONS-DEMO.md).
 
-## Planned capabilities
+## Implemented capabilities
 
-- Stream files into bounded-size chunks rather than loading entire files into memory.
-- Verify chunk integrity with SHA-256 checksums.
-- Expose a storage-node service and metadata model.
-- Replicate chunks across independent nodes and recover after node failures.
-- Add gRPC communication, metadata persistence, background repair, and observability.
+- Stream local files into bounded-size chunks and verify chunk plus whole-file SHA-256 checksums.
+- Persist local file manifests and expose upload/download/list/inspect through `dfs_cli`.
+- Run storage nodes with payload quotas.
+- Replicate individual chunks over a bounded TCP RPC protocol using deterministic placement and read fallback.
+- Audit and repair missing, corrupt, or divergent selected replicas using the first readable copy as a baseline.
+
+The distributed RPC path handles individual chunks; it is not connected to distributed file-manifest upload. gRPC, shared distributed metadata, background repair, and production observability are not implemented.
 
 ## Technology
 
 - C++20 and CMake
 - GoogleTest
 - OpenSSL Crypto for SHA-256
-- Later milestones: gRPC / Protocol Buffers, PostgreSQL if justified, Docker Compose, Prometheus (and optional Grafana)
+
 
 ## Build
 
@@ -49,7 +51,7 @@ docs/              Architecture, decisions, and roadmap
 3. Make failures observable and test recovery through fault injection.
 4. Do not claim distributed guarantees until replication, recovery, and consistency behaviour are implemented and tested.
 
-See [docs/ROADMAP.md](docs/ROADMAP.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+See [architecture](docs/ARCHITECTURE.md), the [architecture walkthrough](docs/ARCHITECTURE-WALKTHROUGH.md), [failure scenarios](docs/FAILURE-SCENARIOS.md), and the [interview guide and checklist](docs/INTERVIEW-GUIDE.md).
 
 
 ## Local CLI (Project Day 6)
@@ -70,7 +72,7 @@ After building, the `dfs_cli` executable accepts a storage-root directory and on
 ./build/dfs_cli ./data download file-001 ./restored.bin
 ```
 
-The root contains separate `chunks/` and `metadata/` directories. This interface is local and single-process for now; the network storage-node/RPC boundary is a later milestone.
+The root contains separate `chunks/` and `metadata/` directories. This remains a local file-manifest path. The distributed RPC tools operate on individual chunks and are not wired to distribute these manifests.
 
 
 ## Storage node console (Project Day 7)

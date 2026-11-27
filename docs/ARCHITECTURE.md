@@ -1,6 +1,8 @@
 # Architecture
 
-## Current milestone: single-node chunk store, file transfer, manifest persistence and local recovery
+## Local storage and file-manifest path (implemented)
+
+The current repository also includes a storage-node process, TCP RPC, deterministic chunk replication, and replica audit/repair; see the later Project Day sections and the [architecture walkthrough](ARCHITECTURE-WALKTHROUGH.md).
 
 The local storage layer isolates chunk persistence behind ChunkStore. Each chunk is limited to 4 MiB, written to a temporary file, and renamed into place. The record contains a format marker, a SHA-256 digest, and the payload. Chunk IDs are restricted to safe filename characters.
 
@@ -103,7 +105,7 @@ Capacity accounting scans regular `.chunk` records and subtracts the fixed recor
 This is a local node boundary only. Quota locks do not coordinate other processes or hosts; temporary files and filesystem overhead are excluded from quota; status does not checksum every stored chunk; the identity marker is not fsync'd; and chunk publication retains ChunkStore's existing durability limitations. The console is intentionally not an RPC server; network transport and placement/replication follow in Project Day 8.
 
 
-## Project Day 8 — TCP RPC, deterministic placement and replication (verification pending)
+## Project Day 8 — TCP RPC, deterministic placement and replication (merged; CI verified)
 
 The new node RPC adapter uses a small length-prefixed binary TCP protocol over IPv4. Each request has an operation byte, a bounded chunk ID and a bounded payload length. The server exposes PUT, GET and STATUS, and delegates integrity/quota checks to the existing StorageNode API. Frames and payloads are capped at approximately 4 MiB plus protocol overhead; client sockets use a two-second send/receive timeout. The server is a single-request-at-a-time loop per node process.
 

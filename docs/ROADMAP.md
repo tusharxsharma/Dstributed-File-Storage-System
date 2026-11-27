@@ -13,9 +13,12 @@ The original 30-day roadmap was compressed to ten project days. Historical imple
 | 7 | Storage-node process | Single-process storage node, configuration, lifecycle and local node interface | Complete |
 | 8 | RPC, placement and replication | Framed TCP RPC, deterministic chunk placement and replica writes/read fallback | Complete |
 | 9 | Failure handling and repair | Node-failure simulation, audit, missing/corrupt/divergent replica repair | Complete |
-| 10 | Operations and integration | Repeatable multi-node demo, bounded operations, docs and final validation | Demo script/docs added; PR CI passed (65/65 tests and three-node smoke demo; run 45978986022) |
+| 10 | Operations and integration | Repeatable multi-node demo, bounded operations, docs and final validation | Complete; CI run 45978986022 passed (65/65 tests and three-node smoke demo) |
 
-## Schedule
+## Original schedule (historical)
+
+The dated plan below records the original target sequence; all ten project days are now complete.
+
 
 - **24 November:** Project Day 6 — metadata catalog and local CLI.
 - **25 November:** Project Day 7 — storage-node process and lifecycle (PR CI verified; post-merge CI follow-up).
@@ -29,7 +32,7 @@ The original 30-day roadmap was compressed to ten project days. Historical imple
 - One C++ codebase and one deployable system with configurable process roles; no Kubernetes and no microservice sprawl.
 - Keep a local CLI/catalog as the baseline interface. RPC is introduced only when the node boundary and replication path are ready.
 - PostgreSQL is introduced only if durable shared metadata needs justify it; do not add a database merely for the demo.
-- Docker Compose and Prometheus (with optional Grafana) are introduced during the operations milestone only if they make the repeatable demo and observability materially better.
+- Compose and Prometheus remain possible future options only if deployment or observability needs justify them.
 - Chunk payloads remain bounded by the 4 MiB limit; metadata growth, queues and RPC message sizes must also have explicit limits.
 - SHA-256 integrity checks, durability boundaries, concurrency semantics, fault injection and honest consistency/repair guarantees remain central.
 
@@ -43,4 +46,4 @@ The original 30-day roadmap was compressed to ten project days. Historical imple
 - No claim of production-grade durability, availability or fault tolerance without corresponding implementation and evidence.
 
 
-See [repeatable operations demo](OPERATIONS-DEMO.md).
+See [repeatable operations demo](OPERATIONS-DEMO.md), [architecture walkthrough](ARCHITECTURE-WALKTHROUGH.md), and [interview guide/final checklist](INTERVIEW-GUIDE.md).
