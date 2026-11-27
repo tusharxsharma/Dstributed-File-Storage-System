@@ -1,6 +1,6 @@
 # 10-Day Roadmap
 
-The original 30-day roadmap was compressed to ten project days. Historical implementation entries and learning notes remain for traceability. Project Days 1–9 are complete. Project Day 10 operations/demo work is on a review branch. GitHub Actions run 45978986022 passed configure, build, all 65 CTest tests, and the three-node demo smoke test on commit 81d5547cd882d67503cc72ab5555e318af750c60.
+The original 30-day roadmap was compressed to ten project days. Historical implementation entries and learning notes remain for traceability. Project Days 1–10 are complete. Day 10 operations/demo work was merged in PR #8. GitHub Actions run 45978986022 passed configure, build, all 65 CTest tests, and the three-node demo smoke test on the PR head.
 
 | Project day | Focus | Expected outcome | Status |
 |---|---|---|---|
