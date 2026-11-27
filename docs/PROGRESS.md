@@ -312,4 +312,4 @@ Project Day 10: operations, repeatable multi-node demo, bounded health/metrics, 
 - Reconciled README and roadmap schedule/status text.
 
 ### Verification
-- Implementation is submitted for review on a branch. The demo has not yet been executed in this environment; CI verification is pending. No local execution is claimed.
+- GitHub Actions run 45978986022 passed configure and build, all 65/65 CTest tests, and the three-node demo smoke test (replicated PUT/GET, byte-for-byte comparison, audit, repair and re-audit) on PR head commit 81d5547cd882d67503cc72ab5555e318af750c60. The demo ran on an isolated GitHub-hosted Ubuntu runner; local execution was unavailable in this environment.
