@@ -8,11 +8,13 @@ A C++20 learning project that grows from a reliable single-node chunk store into
 
 ## Implemented capabilities
 
-- Stream files into bounded-size chunks rather than loading entire files into memory.
-- Verify chunk integrity with SHA-256 checksums.
-- Expose a storage-node service and metadata model.
-- Replicate chunks across independent nodes and recover after node failures.
-- Add gRPC communication, metadata persistence, background repair, and observability.
+- Stream local files into bounded-size chunks and verify chunk plus whole-file SHA-256 checksums.
+- Persist local file manifests and expose upload/download/list/inspect through `dfs_cli`.
+- Run storage nodes with payload quotas.
+- Replicate individual chunks over a bounded TCP RPC protocol using deterministic placement and read fallback.
+- Audit and repair missing, corrupt, or divergent selected replicas using the first readable copy as a baseline.
+
+The distributed RPC path handles individual chunks; it is not connected to distributed file-manifest upload. gRPC, shared distributed metadata, background repair, and production observability are not implemented.
 
 ## Technology
 
