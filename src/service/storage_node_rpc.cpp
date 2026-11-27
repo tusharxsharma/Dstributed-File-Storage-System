@@ -24,6 +24,7 @@ constexpr std::size_t kMaxFrameBytes = kMaxChunkSizeBytes + 256U;
 constexpr std::uint8_t kPut = 1U;
 constexpr std::uint8_t kGet = 2U;
 constexpr std::uint8_t kStatus = 3U;
+constexpr std::uint8_t kRepairPut = 4U;
 constexpr std::uint8_t kSuccess = 1U;
 constexpr std::uint8_t kFailure = 0U;
 
@@ -254,6 +255,9 @@ void StorageNodeRpcServer::handle_connection(int client) noexcept {
         if (operation == kPut) {
             const auto stored = node_.put_chunk(id, data);
             if (!stored) { send_error(client, stored.error()); return; }
+        } else if (operation == kRepairPut) {
+            const auto stored = node_.repair_chunk(id, data);
+            if (!stored) { send_error(client, stored.error()); return; }
         } else if (operation == kGet) {
             if (data_length != 0U) { send_error(client, "GET payload must be empty"); return; }
             const auto retrieved = node_.get_chunk(id);
@@ -335,6 +339,12 @@ Result<std::vector<std::byte>> StorageNodeRpcClient::request(
 Result<void> StorageNodeRpcClient::put_chunk(
     const std::string& chunk_id, const std::vector<std::byte>& data) const {
     const auto response = request(kPut, chunk_id, data);
+    if (!response) return Result<void>::failure(response.error());
+    return Result<void>::success();
+}
+Result<void> StorageNodeRpcClient::repair_put_chunk(
+    const std::string& chunk_id, const std::vector<std::byte>& data) const {
+    const auto response = request(kRepairPut, chunk_id, data);
     if (!response) return Result<void>::failure(response.error());
     return Result<void>::success();
 }
@@ -430,6 +440,119 @@ Result<std::vector<std::byte>> DistributedChunkService::get_chunk(
         failures += target.node_id + ": " + retrieved.error();
     }
     return Result<std::vector<std::byte>>::failure("all selected replicas failed: " + failures);
+}
+
+
+namespace {
+ReplicaHealth classify_replica_error(const std::string& message) {
+    if (message.find("not found") != std::string::npos) return ReplicaHealth::missing;
+    if (message.find("checksum") != std::string::npos ||
+        message.find("invalid chunk header") != std::string::npos ||
+        message.find("truncated chunk") != std::string::npos)
+        return ReplicaHealth::corrupt;
+    return ReplicaHealth::unavailable;
+}
+void rebuild_unresolved(ReplicaRepairReport& report, const std::vector<StorageNodeEndpoint>& targets) {
+    report.unresolved_node_ids.clear();
+    for (const auto& target : targets)
+        if (std::find(report.verified_node_ids.begin(), report.verified_node_ids.end(),
+                      target.node_id) == report.verified_node_ids.end())
+            report.unresolved_node_ids.push_back(target.node_id);
+}
+}
+ReplicaRepairService::ReplicaRepairService(
+    std::vector<StorageNodeEndpoint> nodes, std::size_t replication_factor)
+    : nodes_(std::move(nodes)), replication_factor_(replication_factor) {}
+
+Result<ReplicaRepairReport> ReplicaRepairService::audit_chunk(const std::string& chunk_id) const {
+    const DistributedChunkService placement_service(nodes_, replication_factor_);
+    const auto target_result = placement_service.placement(chunk_id);
+    if (!target_result) return Result<ReplicaRepairReport>::failure(target_result.error());
+    const auto& targets = target_result.value();
+    ReplicaRepairReport report{chunk_id, replication_factor_, {}, {}, {}, {}, {}, {}};
+    std::vector<std::byte> baseline;
+    bool baseline_set = false;
+    for (const auto& target : targets) {
+        const auto retrieved = StorageNodeRpcClient(target).get_chunk(chunk_id);
+        if (!retrieved) {
+            const auto health = classify_replica_error(retrieved.error());
+            report.observations.push_back({target.node_id, health, retrieved.error()});
+            report.errors.push_back(target.node_id + ": " + retrieved.error());
+            continue;
+        }
+        if (!baseline_set) {
+            baseline = retrieved.value();
+            baseline_set = true;
+            report.source_node_id = target.node_id;
+            report.verified_node_ids.push_back(target.node_id);
+            report.observations.push_back({target.node_id, ReplicaHealth::healthy, "selected as audit source"});
+        } else if (retrieved.value() == baseline) {
+            report.verified_node_ids.push_back(target.node_id);
+            report.observations.push_back({target.node_id, ReplicaHealth::healthy, "payload matches audit source"});
+        } else {
+            report.observations.push_back({target.node_id, ReplicaHealth::divergent, "readable payload differs from selected source"});
+            report.errors.push_back(target.node_id + ": payload diverges from audit source");
+        }
+    }
+    rebuild_unresolved(report, targets);
+    return Result<ReplicaRepairReport>::success(std::move(report));
+}
+Result<ReplicaRepairReport> ReplicaRepairService::repair_chunk(const std::string& chunk_id) const {
+    auto audited = audit_chunk(chunk_id);
+    if (!audited) return Result<ReplicaRepairReport>::failure(audited.error());
+    auto report = audited.value();
+    const DistributedChunkService placement_service(nodes_, replication_factor_);
+    const auto target_result = placement_service.placement(chunk_id);
+    if (!target_result) return Result<ReplicaRepairReport>::failure(target_result.error());
+    const auto& targets = target_result.value();
+    if (report.source_node_id.empty()) return Result<ReplicaRepairReport>::success(std::move(report));
+    const auto source_it = std::find_if(targets.begin(), targets.end(), [&](const auto& endpoint) {
+        return endpoint.node_id == report.source_node_id;
+    });
+    if (source_it == targets.end()) return Result<ReplicaRepairReport>::failure("audit source endpoint missing");
+    const auto source = StorageNodeRpcClient(*source_it).get_chunk(chunk_id);
+    if (!source) {
+        report.errors.push_back("audit source became unavailable: " + source.error());
+        report.source_node_id.clear();
+        report.verified_node_ids.clear();
+        rebuild_unresolved(report, targets);
+        return Result<ReplicaRepairReport>::success(std::move(report));
+    }
+    for (const auto& target : targets) {
+        if (std::find(report.verified_node_ids.begin(), report.verified_node_ids.end(),
+                      target.node_id) != report.verified_node_ids.end()) continue;
+        const auto repaired = StorageNodeRpcClient(target).repair_put_chunk(chunk_id, source.value());
+        if (!repaired) {
+            report.errors.push_back(target.node_id + ": repair write failed: " + repaired.error());
+            for (auto& observation : report.observations)
+                if (observation.node_id == target.node_id) {
+                    observation.health = ReplicaHealth::repair_failed;
+                    observation.detail = repaired.error();
+                }
+            continue;
+        }
+        const auto verified = StorageNodeRpcClient(target).get_chunk(chunk_id);
+        if (!verified || verified.value() != source.value()) {
+            const std::string detail = verified ? "repair verification returned divergent bytes"
+                                               : "repair verification read failed: " + verified.error();
+            report.errors.push_back(target.node_id + ": " + detail);
+            for (auto& observation : report.observations)
+                if (observation.node_id == target.node_id) {
+                    observation.health = ReplicaHealth::repair_failed;
+                    observation.detail = detail;
+                }
+            continue;
+        }
+        report.verified_node_ids.push_back(target.node_id);
+        report.repaired_node_ids.push_back(target.node_id);
+        for (auto& observation : report.observations)
+            if (observation.node_id == target.node_id) {
+                observation.health = ReplicaHealth::healthy;
+                observation.detail = "repair write and read-back verified";
+            }
+    }
+    rebuild_unresolved(report, targets);
+    return Result<ReplicaRepairReport>::success(std::move(report));
 }
 
 } // namespace dfs
