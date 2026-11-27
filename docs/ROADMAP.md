@@ -12,7 +12,7 @@ The original 30-day roadmap was compressed to ten project days. Historical origi
 | 6 | Metadata and user interface | Local manifest catalog, storage facade, CLI upload/download/list/inspect | Complete |
 | 7 | Storage-node process | Single-process storage node, configuration, lifecycle and local node interface | Complete |
 | 8 | RPC, placement and replication | Framed TCP RPC, deterministic chunk placement and replica writes/read fallback | Complete |
-| 9 | Failure handling and repair | Node-failure simulation, audit, missing/corrupt/divergent replica repair | In progress |
+| 9 | Failure handling and repair | Node-failure simulation, audit, missing/corrupt/divergent replica repair | Complete |
 | 10 | Operations and integration | Repeatable multi-node demo, bounded operations, metrics, docs and final validation | Planned |
 
 ## Schedule

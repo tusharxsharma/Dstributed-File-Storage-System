@@ -1,5 +1,6 @@
 #include "dfs/service/storage_node_rpc.hpp"
 #include "dfs/storage/chunk_store.hpp"
+#include <algorithm>
 #include <gtest/gtest.h>
 #include <chrono>
 #include <filesystem>

@@ -4,7 +4,7 @@ A C++20 learning project that grows from a reliable single-node chunk store into
 
 ## Project status
 
-**Project Days 1–8 complete; Project Day 9 failure handling and repair is in progress. Day 10 remains.** The single-node storage foundation, file transfer, manifest persistence, manifest durability/recovery, persistence fault-injection and local same-chunk concurrency policy are complete. The storage-node process, RPC, placement/replication, repair, operations and demo milestones remain; see docs/ROADMAP.md and docs/PROGRESS.md.
+**Project Days 1–9 complete; Project Day 10 operations and final integration remains.** The single-node storage foundation, file transfer, manifest persistence, manifest durability/recovery, persistence fault-injection and local same-chunk concurrency policy are complete. The storage-node process, RPC, placement/replication, repair, operations and demo milestones remain; see docs/ROADMAP.md and docs/PROGRESS.md.
 
 ## Planned capabilities
 
@@ -108,7 +108,7 @@ The server accepts `quit` on stdin to stop. For a one-chunk replicated write/rea
 PR CI verified this milestone with 59/59 tests passing (Debug, ASan and UBSan); the code is merged into main. This RPC prototype handles individual chunks, not a distributed file-manifest upload. Placement is deterministic for the same ordered node list and replication factor; it is not persisted or versioned. Reads fall back across selected replicas. A replication write reports incomplete if any selected replica fails, but it does not roll back partial successes. The custom TCP protocol is plaintext and unauthenticated; do not expose it to untrusted networks.
 
 
-## Replica audit and repair (Project Day 9)
+## Replica audit and repair (Project Day 9 — CI verified)
 
 Audit or reconcile a chunk across its deterministically selected replica set:
 
@@ -117,4 +117,4 @@ Audit or reconcile a chunk across its deterministically selected replica set:
 ./build/dfs_repair_cli repair chunk-001 3 node-a 127.0.0.1 7101 node-b 127.0.0.1 7102 node-c 127.0.0.1 7103
 ```
 
-Repair uses the first readable replica as its comparison source, identifies missing, unavailable, internally corrupt or divergent copies, then writes and reads back replacements on reachable targets. If no source can be read, or a node remains offline, the report stays incomplete. The repair RPC is privileged but the prototype transport has no authentication; use only on a trusted network. It is not a distributed consensus protocol and does not persist placement or membership epochs.
+PR CI run 45952748205 verified the Day 9 milestone with 65/65 tests passing (Debug, ASan and UBSan). Repair uses the first readable replica as its comparison source, identifies missing, unavailable, internally corrupt or divergent copies, then writes and reads back replacements on reachable targets. If no source can be read, or a node remains offline, the report stays incomplete. The repair RPC is privileged but the prototype transport has no authentication; use only on a trusted network. It is not a distributed consensus protocol and does not persist placement or membership epochs.

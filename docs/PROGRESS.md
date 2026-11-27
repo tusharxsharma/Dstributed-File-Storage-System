@@ -270,7 +270,7 @@ Project Day 9: simulate node failure and implement replica verification and repa
 - PR-head GitHub Actions run 45769571199 verified commit f9d22bbcc224d63281609eeaf106ffcfd3950dd8: configure and build passed; CTest passed 59/59 tests in 4.78 seconds. Debug CI enabled AddressSanitizer and UndefinedBehaviorSanitizer. Post-merge main run is not separately confirmed here.
 
 
-## 2026-11-27 — Project Day 9: replica audit and repair (implementation staged; CI pending)
+## 2026-11-27 — Project Day 9: replica audit and repair (PR CI verified)
 
 ### Implemented on the milestone branch
 - Add a repair-only storage-node write path that replaces a missing, corrupt or divergent record while enforcing the existing node quota. Normal PUT retains its refusal to replace an internally corrupt record.
@@ -282,7 +282,7 @@ Project Day 9: simulate node failure and implement replica verification and repa
 
 ### Verification status
 - Local configure/build/CTest is unavailable because GitHub DNS resolution failed.
-- Day 9 PR CI is pending; no passing test count or merge is claimed yet.
+- PR-head GitHub Actions run 45952748205 verified commit bde12b7c62fb6d63f04ad18ca9bfa16b2e5d8489: configure and build passed; CTest passed 65/65 tests in 4.12 seconds. Debug CI enabled AddressSanitizer and UndefinedBehaviorSanitizer. Post-merge main run is not separately confirmed yet.
 
 ### Limitations
 - The first readable replica is the repair source. Without a stored expected checksum or authoritative metadata, the service cannot prove that source is the original/correct content; a readable but wrong first replica could propagate.
@@ -293,3 +293,7 @@ Project Day 9: simulate node failure and implement replica verification and repa
 
 ### Next milestone
 Project Day 10: operations, repeatable multi-node demo, bounded health/metrics, documentation and final integration validation.
+
+
+### Project Day 9 verification follow-up
+- PR #7 was tested on commit bde12b7c62fb6d63f04ad18ca9bfa16b2e5d8489; run 45952748205 completed successfully: configure, build and CTest passed 65/65 tests in 4.12 seconds, with Debug ASan and UBSan enabled.
