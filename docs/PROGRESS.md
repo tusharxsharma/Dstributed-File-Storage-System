@@ -304,7 +304,7 @@ Project Day 10: operations, repeatable multi-node demo, bounded health/metrics, 
 - PR #7 was squash-merged into main as 043a5a8781921a0bd9b0cc624a03063939964220. Post-merge main CI is not separately confirmed.
 
 
-## 2026-11-27 — Project Day 10: operations/demo integration (review branch)
+## 2026-11-27 — Project Day 10: operations/demo integration (merged)
 
 ### Added
 - A repeatable Bash smoke demo starts three local RPC nodes, performs replicated PUT and GET, compares the reconstructed bytes, and runs audit/repair/audit.
