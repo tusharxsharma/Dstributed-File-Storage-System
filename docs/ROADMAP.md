@@ -11,7 +11,7 @@ The original 30-day roadmap was compressed to ten project days. Historical origi
 | 5 | Concurrency safety | Defined same-chunk policy, safe temp naming and race-focused tests | Complete |
 | 6 | Metadata and user interface | Local manifest catalog, storage facade, CLI upload/download/list/inspect | Complete |
 | 7 | Storage-node process | Single-process storage node, configuration, lifecycle and local node interface | Complete |
-| 8 | RPC, placement and replication | RPC boundary, simple placement and replication across configured nodes | Planned |
+| 8 | RPC, placement and replication | Framed TCP RPC, deterministic chunk placement and replica writes/read fallback | In progress |
 | 9 | Failure handling and repair | Node-failure simulation, repair and replica integrity verification | Planned |
 | 10 | Operations and integration | Repeatable multi-node demo, bounded operations, metrics, docs and final validation | Planned |
 

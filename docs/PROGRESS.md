@@ -237,3 +237,28 @@ Project Day 8: introduce RPC, simple placement and replication across the storag
 ### Project Day 7 post-merge verification
 - PR #5 was squash-merged into main as commit a7926d1448b559d4e864f6a2fa2911cc2b8ce86e.
 - Post-merge GitHub Actions run 45562816481 completed successfully: configure and build passed; CTest passed 54/54 tests (100%) in 5.21 seconds. Debug CI enabled AddressSanitizer and UndefinedBehaviorSanitizer.
+
+
+## 2026-11-26 — Project Day 8: RPC, placement and replication (implementation staged; CI pending)
+
+### Implemented on the milestone branch
+- Add a bounded length-prefixed TCP RPC adapter for storage-node PUT, GET and STATUS; delegates data integrity and quota enforcement to StorageNode.
+- Add an RPC client with bounded frames and two-second send/receive socket timeouts.
+- Add deterministic distinct-node placement (FNV-1a chunk-ID hash plus cyclic selection over the configured node order), replica writes and read fallback across selected replicas.
+- Add `dfs_rpc_node` and `dfs_cluster_cli` for foreground node service and one-chunk replicated write/read demonstration.
+- Add TCP integration tests for put/get/status, placement across distinct nodes, fallback after stopping a replica, invalid replication factors, oversized chunks and error propagation.
+- Update CMake and documentation. The implementation uses a small native TCP protocol instead of gRPC/Protobuf because the current bounded chunk RPC surface is only three operations; this avoids generated-code/dependency overhead for the prototype.
+
+### Verification status
+- Local configure/build/CTest is unavailable in this environment because GitHub DNS resolution fails.
+- PR CI is pending. No test pass, merge or push to main is claimed at this stage.
+
+### Limitations
+- IPv4/POSIX-only transport, plaintext and unauthenticated; do not expose it to untrusted networks.
+- Single-threaded accept/handling loop per server and two-second client I/O timeout; no server-side timeout, concurrent workers, protocol negotiation or inter-process quota lock.
+- Stateless placement depends on stable ordered membership and replication factor; no placement metadata or membership epochs.
+- A partial replication failure may leave a subset of replicas; no rollback or repair yet. Reads try selected replicas in configured placement order.
+- Only individual chunks are replicated. Distributed file-manifest ingestion and metadata placement remain future integration scope.
+
+### Next milestone
+Project Day 9: simulate node failure and implement replica verification and repair from surviving copies; test that failed writes and missing/corrupt replicas can be reconciled.
