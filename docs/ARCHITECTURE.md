@@ -1,6 +1,8 @@
 # Architecture
 
-## Local storage and file-manifest path (implemented)\n\nThe current repository also includes a storage-node process, TCP RPC, deterministic chunk replication, and replica audit/repair; see the later Project Day sections and the [architecture walkthrough](ARCHITECTURE-WALKTHROUGH.md).
+## Local storage and file-manifest path (implemented)
+
+The current repository also includes a storage-node process, TCP RPC, deterministic chunk replication, and replica audit/repair; see the later Project Day sections and the [architecture walkthrough](ARCHITECTURE-WALKTHROUGH.md).
 
 The local storage layer isolates chunk persistence behind ChunkStore. Each chunk is limited to 4 MiB, written to a temporary file, and renamed into place. The record contains a format marker, a SHA-256 digest, and the payload. Chunk IDs are restricted to safe filename characters.
 
