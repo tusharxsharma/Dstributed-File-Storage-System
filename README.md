@@ -118,4 +118,14 @@ Audit or reconcile a chunk across its deterministically selected replica set:
 ```
 
 PR CI run 45952920608 verified the final Day 9 PR head with 65/65 tests passing in 7.05 seconds (Debug, ASan and UBSan). Repair uses the first readable replica as its comparison source, identifies missing, unavailable, internally corrupt or divergent copies, then writes and reads back replacements on reachable targets. If no source can be read, or a node remains offline, the report stays incomplete. The repair RPC is privileged but the prototype transport has no authentication; use only on a trusted network. It is not a distributed consensus protocol and does not persist placement or membership epochs.
-\n\n## Repeatable multi-node demo (Project Day 10)\n\nRun the smoke demonstration on a POSIX/Bash environment after building:\n\n```bash\nbash scripts/demo-multi-node.sh demo-run build\n```\n\nIt launches three local nodes, performs replicated PUT and GET, compares restored bytes, then runs replica audit/repair/audit. See [operations demo](docs/OPERATIONS-DEMO.md).\n
+
+
+## Repeatable multi-node demo (Project Day 10)
+
+Run the smoke demonstration on a POSIX/Bash environment after building:
+
+```bash
+bash scripts/demo-multi-node.sh demo-run build
+```
+
+It launches three local nodes, performs replicated PUT and GET, compares restored bytes, then runs replica audit/repair/audit. See [operations demo](docs/OPERATIONS-DEMO.md).
