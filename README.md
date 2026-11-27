@@ -4,7 +4,7 @@ A C++20 learning project that grows from a reliable single-node chunk store into
 
 ## Project status
 
-**Project Days 1–9 complete; Project Day 10 operations and final integration remains.** The single-node storage foundation, file transfer, manifest persistence, manifest durability/recovery, persistence fault-injection and local same-chunk concurrency policy are complete. The storage-node process, RPC, placement/replication, repair, operations and demo milestones remain; see docs/ROADMAP.md and docs/PROGRESS.md.
+**Project Days 1–9 complete; Project Day 10 repeatable operations demo added on a review branch.** See docs/ROADMAP.md, docs/PROGRESS.md and docs/OPERATIONS-DEMO.md. Day 10 execution/CI verification is pending.
 
 ## Planned capabilities
 
@@ -118,3 +118,4 @@ Audit or reconcile a chunk across its deterministically selected replica set:
 ```
 
 PR CI run 45952920608 verified the final Day 9 PR head with 65/65 tests passing in 7.05 seconds (Debug, ASan and UBSan). Repair uses the first readable replica as its comparison source, identifies missing, unavailable, internally corrupt or divergent copies, then writes and reads back replacements on reachable targets. If no source can be read, or a node remains offline, the report stays incomplete. The repair RPC is privileged but the prototype transport has no authentication; use only on a trusted network. It is not a distributed consensus protocol and does not persist placement or membership epochs.
+\n\n## Repeatable multi-node demo (Project Day 10)\n\nRun the smoke demonstration on a POSIX/Bash environment after building:\n\n```bash\nbash scripts/demo-multi-node.sh demo-run build\n```\n\nIt launches three local nodes, performs replicated PUT and GET, compares restored bytes, then runs replica audit/repair/audit. See [operations demo](docs/OPERATIONS-DEMO.md).\n
