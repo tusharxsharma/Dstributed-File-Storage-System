@@ -26,7 +26,7 @@ for i in 0 1 2; do
   fifo="$TMP/${IDS[$i]}.fifo"; rm -f "$fifo"; mkfifo "$fifo"; FIFOS+=("$fifo")
   # Open read/write to keep the node's stdin pipe alive until cleanup.
   exec {fd}<>"$fifo"; FDS+=("$fd")
-  "$BIN/dfs_rpc_node" "${IDS[$i]}" "$ROOT/${IDS[$i]}" 127.0.0.1 "${PORTS[$i]}" <"$fifo" >"$TMP/${IDS[$i]}.log" 2>&1 &
+  (eval "exec $fd>&-"; "$BIN/dfs_rpc_node" "${IDS[$i]}" "$ROOT/${IDS[$i]}" 127.0.0.1 "${PORTS[$i]}" <"$fifo" >"$TMP/${IDS[$i]}.log" 2>&1) &
   PIDS+=("$!")
 done
 
