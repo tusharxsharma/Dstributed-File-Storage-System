@@ -41,4 +41,6 @@ The original 30-day roadmap was compressed to ten project days. Historical imple
 - Failure modes, consistency and durability limitations are explicit.
 - Any benchmark states the hardware, workload and measurement method.
 - No claim of production-grade durability, availability or fault tolerance without corresponding implementation and evidence.
-\n\nSee [repeatable operations demo](OPERATIONS-DEMO.md).\n
+
+
+See [repeatable operations demo](OPERATIONS-DEMO.md).
