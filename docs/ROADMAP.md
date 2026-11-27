@@ -1,6 +1,6 @@
 # 10-Day Roadmap
 
-The original 30-day roadmap was compressed to ten project days. Historical original Day 1–6 implementation entries and learning notes remain for traceability; compressed Project Days 1–4 group the original foundation, file transfer, manifest persistence, durability, recovery and fault-injection work. Project Day 5 concurrency safety was completed and merged on 23 November 2026. The remaining milestones are scheduled through 28 November, with 29 November reserved for final buffer and deadline reporting.
+The original 30-day roadmap was compressed to ten project days. Historical implementation entries and learning notes remain for traceability. Project Days 1–9 are complete. Project Day 10 operations/demo work is on a review branch. GitHub Actions run 45978986022 passed configure, build, all 65 CTest tests, and the three-node demo smoke test on commit 81d5547cd882d67503cc72ab5555e318af750c60.
 
 | Project day | Focus | Expected outcome | Status |
 |---|---|---|---|
@@ -13,7 +13,7 @@ The original 30-day roadmap was compressed to ten project days. Historical origi
 | 7 | Storage-node process | Single-process storage node, configuration, lifecycle and local node interface | Complete |
 | 8 | RPC, placement and replication | Framed TCP RPC, deterministic chunk placement and replica writes/read fallback | Complete |
 | 9 | Failure handling and repair | Node-failure simulation, audit, missing/corrupt/divergent replica repair | Complete |
-| 10 | Operations and integration | Repeatable multi-node demo, bounded operations, metrics, docs and final validation | Planned |
+| 10 | Operations and integration | Repeatable multi-node demo, bounded operations, docs and final validation | Demo script/docs added; PR CI passed (65/65 tests and three-node smoke demo; run 45978986022) |
 
 ## Schedule
 
@@ -41,3 +41,6 @@ The original 30-day roadmap was compressed to ten project days. Historical origi
 - Failure modes, consistency and durability limitations are explicit.
 - Any benchmark states the hardware, workload and measurement method.
 - No claim of production-grade durability, availability or fault tolerance without corresponding implementation and evidence.
+
+
+See [repeatable operations demo](OPERATIONS-DEMO.md).

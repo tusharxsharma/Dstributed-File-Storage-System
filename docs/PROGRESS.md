@@ -302,3 +302,14 @@ Project Day 10: operations, repeatable multi-node demo, bounded health/metrics, 
 ### Project Day 9 latest PR-head verification and merge
 - PR #7 final head c634b6e44d0a9ac83def0775a08c224a1e12a799 was verified by GitHub Actions run 45952920608: configure, build and CTest passed 65/65 tests in 7.05 seconds; Debug ASan and UBSan enabled.
 - PR #7 was squash-merged into main as 043a5a8781921a0bd9b0cc624a03063939964220. Post-merge main CI is not separately confirmed.
+
+
+## 2026-11-27 — Project Day 10: operations/demo integration (review branch)
+
+### Added
+- A repeatable Bash smoke demo starts three local RPC nodes, performs replicated PUT and GET, compares the reconstructed bytes, and runs audit/repair/audit.
+- Added operations demo documentation and a Day 10 learning note.
+- Reconciled README and roadmap schedule/status text.
+
+### Verification
+- GitHub Actions run 45978986022 passed configure and build, all 65/65 CTest tests, and the three-node demo smoke test (replicated PUT/GET, byte-for-byte comparison, audit, repair and re-audit) on PR head commit 81d5547cd882d67503cc72ab5555e318af750c60. The demo ran on an isolated GitHub-hosted Ubuntu runner; local execution was unavailable in this environment.
