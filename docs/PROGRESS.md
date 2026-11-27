@@ -297,3 +297,8 @@ Project Day 10: operations, repeatable multi-node demo, bounded health/metrics, 
 
 ### Project Day 9 verification follow-up
 - PR #7 was tested on commit bde12b7c62fb6d63f04ad18ca9bfa16b2e5d8489; run 45952748205 completed successfully: configure, build and CTest passed 65/65 tests in 4.12 seconds, with Debug ASan and UBSan enabled.
+
+
+### Project Day 9 latest PR-head verification and merge
+- PR #7 final head c634b6e44d0a9ac83def0775a08c224a1e12a799 was verified by GitHub Actions run 45952920608: configure, build and CTest passed 65/65 tests in 7.05 seconds; Debug ASan and UBSan enabled.
+- PR #7 was squash-merged into main as 043a5a8781921a0bd9b0cc624a03063939964220. Post-merge main CI is not separately confirmed.
