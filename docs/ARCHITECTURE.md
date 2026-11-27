@@ -103,7 +103,7 @@ Capacity accounting scans regular `.chunk` records and subtracts the fixed recor
 This is a local node boundary only. Quota locks do not coordinate other processes or hosts; temporary files and filesystem overhead are excluded from quota; status does not checksum every stored chunk; the identity marker is not fsync'd; and chunk publication retains ChunkStore's existing durability limitations. The console is intentionally not an RPC server; network transport and placement/replication follow in Project Day 8.
 
 
-## Project Day 8 — TCP RPC, deterministic placement and replication (verification pending)
+## Project Day 8 — TCP RPC, deterministic placement and replication (merged; CI verified)
 
 The new node RPC adapter uses a small length-prefixed binary TCP protocol over IPv4. Each request has an operation byte, a bounded chunk ID and a bounded payload length. The server exposes PUT, GET and STATUS, and delegates integrity/quota checks to the existing StorageNode API. Frames and payloads are capped at approximately 4 MiB plus protocol overhead; client sockets use a two-second send/receive timeout. The server is a single-request-at-a-time loop per node process.
 
