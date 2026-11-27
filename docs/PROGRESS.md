@@ -262,3 +262,34 @@ Project Day 8: introduce RPC, simple placement and replication across the storag
 
 ### Next milestone
 Project Day 9: simulate node failure and implement replica verification and repair from surviving copies; test that failed writes and missing/corrupt replicas can be reconciled.
+
+
+## 2026-11-27 — Project Day 8 verification follow-up
+
+- PR #6 (https://github.com/tusharxsharma/Dstributed-File-Storage-System/pull/6) was squash-merged into main as commit 1066cab11eeb9592b8a048753d71ddc4d2c41e9c.
+- PR-head GitHub Actions run 45769571199 verified commit f9d22bbcc224d63281609eeaf106ffcfd3950dd8: configure and build passed; CTest passed 59/59 tests in 4.78 seconds. Debug CI enabled AddressSanitizer and UndefinedBehaviorSanitizer. Post-merge main run is not separately confirmed here.
+
+
+## 2026-11-27 — Project Day 9: replica audit and repair (implementation staged; CI pending)
+
+### Implemented on the milestone branch
+- Add a repair-only storage-node write path that replaces a missing, corrupt or divergent record while enforcing the existing node quota. Normal PUT retains its refusal to replace an internally corrupt record.
+- Extend the existing TCP protocol with a repair PUT operation; the client and server still use bounded frames and the existing checksum-verified read path.
+- Add ReplicaRepairService audit: inspect the selected replica set, choose the first readable copy as a comparison source, classify missing/unavailable/corrupt/divergent replicas, and report unresolved nodes.
+- Add repair: restore unverified replicas from the source, read each repaired copy back, and only mark it verified if the bytes match. Reports remain incomplete when a node is offline or no source exists.
+- Add dfs_repair_cli audit|repair and integration tests for healthy audit, missing replica, payload corruption, readable divergence, offline-node reporting and total-source loss.
+- Update README, architecture, roadmap and progress.
+
+### Verification status
+- Local configure/build/CTest is unavailable because GitHub DNS resolution failed.
+- Day 9 PR CI is pending; no passing test count or merge is claimed yet.
+
+### Limitations
+- The first readable replica is the repair source. Without a stored expected checksum or authoritative metadata, the service cannot prove that source is the original/correct content; a readable but wrong first replica could propagate.
+- Repair targets must be reachable during repair; an offline node remains unresolved until it returns.
+- Repair publication is a single-node temporary-file/rename operation, not a distributed transaction. A partial repair can occur if nodes fail midway.
+- Repair RPC is unauthenticated and plaintext like the existing RPC; it must not be exposed to untrusted networks.
+- Invalid-size chunk records are rejected by capacity scanning and are outside this repair path. Membership and placement are stateless/configured; no consensus, placement epoch or durable repair queue.
+
+### Next milestone
+Project Day 10: operations, repeatable multi-node demo, bounded health/metrics, documentation and final integration validation.

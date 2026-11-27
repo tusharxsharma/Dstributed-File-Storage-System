@@ -55,6 +55,9 @@ target_link_libraries(dfs_rpc_node PRIVATE dfs_core)
 add_executable(dfs_cluster_cli src/app/cluster_main.cpp)
 target_link_libraries(dfs_cluster_cli PRIVATE dfs_core)
 
+add_executable(dfs_repair_cli src/app/repair_main.cpp)
+target_link_libraries(dfs_repair_cli PRIVATE dfs_core)
+
 if(BUILD_TESTING)
     include(FetchContent)
     FetchContent_Declare(
@@ -73,6 +76,7 @@ if(BUILD_TESTING)
         tests/unit/storage_service_test.cpp
         tests/unit/storage_node_test.cpp
         tests/unit/storage_node_rpc_test.cpp
+        tests/unit/replica_repair_test.cpp
     )
     target_link_libraries(dfs_tests PRIVATE dfs_core GTest::gtest_main)
     include(GoogleTest)

@@ -235,6 +235,44 @@ Result<ChunkInfo> StorageNode::put_chunk(
     return chunks_.put(chunk_id, data);
 }
 
+
+Result<ChunkInfo> StorageNode::repair_chunk(
+    const std::string& chunk_id, const std::vector<std::byte>& data) {
+    std::lock_guard root_guard(*root_mutex_);
+    const auto initialized = ensure_initialized();
+    if (!initialized) return Result<ChunkInfo>::failure(initialized.error());
+    if (!valid_chunk_id(chunk_id))
+        return Result<ChunkInfo>::failure("chunk ID must contain 1 to 128 safe filename characters");
+    if (data.size() > kMaxChunkSizeBytes)
+        return Result<ChunkInfo>::failure("chunk exceeds the 4 MiB size limit");
+    const auto current = scan_status();
+    if (!current) return Result<ChunkInfo>::failure(current.error());
+    std::uint64_t existing_bytes = 0U;
+    const auto existing_path = chunks_.root() / (chunk_id + ".chunk");
+    std::error_code error;
+    const auto existing_status = std::filesystem::symlink_status(existing_path, error);
+    if (error && error != std::errc::no_such_file_or_directory)
+        return Result<ChunkInfo>::failure("inspect repair target: " + error.message());
+    if (!error && std::filesystem::exists(existing_status)) {
+        if (!std::filesystem::is_regular_file(existing_status))
+            return Result<ChunkInfo>::failure("repair target is not a regular file");
+        const auto file_size = std::filesystem::file_size(existing_path, error);
+        if (error) return Result<ChunkInfo>::failure("inspect repair target size: " + error.message());
+        if (file_size < kChunkRecordHeaderBytes ||
+            file_size - kChunkRecordHeaderBytes > kMaxChunkSizeBytes)
+            return Result<ChunkInfo>::failure("repair target has an invalid record size");
+        existing_bytes = static_cast<std::uint64_t>(file_size - kChunkRecordHeaderBytes);
+    }
+    if (existing_bytes > current.value().used_bytes)
+        return Result<ChunkInfo>::failure("capacity accounting inconsistency");
+    const auto base_used = current.value().used_bytes - existing_bytes;
+    const auto new_size = static_cast<std::uint64_t>(data.size());
+    if (new_size > config_.capacity_bytes || base_used > config_.capacity_bytes - new_size)
+        return Result<ChunkInfo>::failure("node capacity exceeded");
+    // Repair bypasses normal put's checksum refusal; ChunkStore still publishes atomically by rename.
+    return chunks_.put(chunk_id, data);
+}
+
 Result<std::vector<std::byte>> StorageNode::get_chunk(const std::string& chunk_id) const {
     std::lock_guard root_guard(*root_mutex_);
     const auto initialized = ensure_initialized();

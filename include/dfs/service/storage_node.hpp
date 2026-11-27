@@ -36,6 +36,9 @@ public:
     [[nodiscard]] Result<void> initialize();
     [[nodiscard]] Result<ChunkInfo> put_chunk(
         const std::string& chunk_id, const std::vector<std::byte>& data);
+    // Repair publication may replace a corrupt/divergent record, while still enforcing quota.
+    [[nodiscard]] Result<ChunkInfo> repair_chunk(
+        const std::string& chunk_id, const std::vector<std::byte>& data);
     [[nodiscard]] Result<std::vector<std::byte>> get_chunk(
         const std::string& chunk_id) const;
     [[nodiscard]] Result<StorageNodeStatus> status() const;
