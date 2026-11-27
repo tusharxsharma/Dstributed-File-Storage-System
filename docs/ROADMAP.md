@@ -13,7 +13,7 @@ The original 30-day roadmap was compressed to ten project days. Historical imple
 | 7 | Storage-node process | Single-process storage node, configuration, lifecycle and local node interface | Complete |
 | 8 | RPC, placement and replication | Framed TCP RPC, deterministic chunk placement and replica writes/read fallback | Complete |
 | 9 | Failure handling and repair | Node-failure simulation, audit, missing/corrupt/divergent replica repair | Complete |
-| 10 | Operations and integration | Repeatable multi-node demo, bounded operations, docs and final validation | Demo script/docs added; PR CI passed (65/65 tests and three-node smoke demo; run 45978986022) |
+| 10 | Operations and integration | Repeatable multi-node demo, bounded operations, docs and final validation | Complete; CI run 45978986022 passed (65/65 tests and three-node smoke demo) |
 
 ## Schedule
 
@@ -43,4 +43,4 @@ The original 30-day roadmap was compressed to ten project days. Historical imple
 - No claim of production-grade durability, availability or fault tolerance without corresponding implementation and evidence.
 
 
-See [repeatable operations demo](OPERATIONS-DEMO.md).
+See [repeatable operations demo](OPERATIONS-DEMO.md), [architecture walkthrough](ARCHITECTURE-WALKTHROUGH.md), and [interview guide/final checklist](INTERVIEW-GUIDE.md).
