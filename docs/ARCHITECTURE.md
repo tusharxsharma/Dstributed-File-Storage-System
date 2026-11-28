@@ -26,31 +26,27 @@ ManifestStore::load -> bounded parse + metadata checksum + structural validation
                    -> temporary output + whole-file SHA-256 -> rename to destination
 ~~~
 
-## Target architecture
+## Aspirational architecture (not implemented)
+
+The following is a possible future design only. The current repository does **not** contain a coordinator, PostgreSQL metadata store, automatic membership, a repair worker, or distributed file-manifest ingestion.
 
 ~~~text
 Client
   |
   v
-API / Coordinator  ---- Metadata Store
-  |                       (PostgreSQL)
+Future API / Coordinator  ---- Future Metadata Store
   |
   +---- Storage Node A
-  |       +-- chunk files
-  |
   +---- Storage Node B
-  |       +-- replicated chunks
-  |
   +---- Storage Node C
-          +-- chunk files
 
-Coordinator / Repair Worker
-  +-- placement decisions
-  +-- replica health checks
-  +-- repair and rebalancing
+Future coordinator/repair worker:
+  +-- placement and membership
+  +-- replica health scheduling
+  +-- durable repair/rebalancing
 ~~~
 
-## Planned metadata model
+## Possible future metadata model (not implemented)
 
 - File: logical file ID, owner, size, chunking parameters, version.
 - Chunk: content ID, size, SHA-256, placement and replica state.
@@ -80,9 +76,9 @@ ManifestStore can explicitly scan only the sibling temporary-file prefix associa
 
 ManifestStore now accepts an injected operations object for temporary-file creation, write, file/directory fsync, close, rename, parent-directory open and recovery removal. Normal construction uses POSIX wrappers. Tests override one operation at a time and assert the pre-rename preservation invariant or the post-rename visible-but-durability-uncertain outcome. This is a test seam, not a new platform-independent durability guarantee. ChunkStore and transfer operations are not covered.
 
-## Compressed 10-day project scope
+## Completed compressed 10-day project scope
 
-Historical implementation days 1–6 map to compressed Project Days 1–4: foundation, file transfer, manifest persistence, then manifest durability/recovery/fault injection. Project Day 5 establishes local same-chunk thread safety. Future milestones use one C++ executable with configurable coordinator/storage-node roles, a gRPC interface, a small metadata catalog, replication/repair, bounded operations and a repeatable Compose demo; Kubernetes and a broad microservice split are intentionally out of scope.
+Historical implementation days 1–6 map to compressed Project Days 1–4: foundation, file transfer, manifest persistence, then manifest durability/recovery/fault injection. Project Days 5–10 are complete: same-chunk thread safety, local catalog and CLI, storage-node process, bounded TCP RPC with deterministic chunk placement and replication, replica audit/repair, and the repeatable three-node demo. The current system remains a learning prototype with separate local-file and distributed-single-chunk paths. It does not use gRPC, PostgreSQL, Compose, Kubernetes, a coordinator service, or distributed file-manifest upload.
 
 ## ChunkStore concurrency contract (Project Day 5)
 
